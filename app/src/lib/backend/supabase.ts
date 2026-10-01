@@ -35,6 +35,7 @@ const codeMap: Partial<Record<string, AuthErrorCode>> = {
   user_already_exists: "email_taken",
   email_exists: "email_taken",
   weak_password: "weak_password",
+  same_password: "same_password",
   otp_expired: "link_expired",
   session_not_found: "link_expired",
   flow_state_expired: "link_expired",
@@ -102,6 +103,16 @@ export function createSupabaseBackend(url: string, key: string): Backend {
     return { id: u.id, email, name: meta.display_name || meta.full_name || meta.name || email.split("@")[0] };
   };
   const redirect = (path: string) => new URL(path, window.location.origin + import.meta.env.BASE_URL).toString();
+
+  /** Check the signed-in player's password by signing in again with it. */
+  const verifyPassword = async (password: string) => {
+    const { data } = await sb.auth.getSession();
+    const email = data.session?.user.email;
+    if (!email) throw new AuthError("unknown", "Not signed in");
+    const { data: res, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) throw isAuthApiError(error) && error.code === "invalid_credentials" ? new AuthError("wrong_password") : toAuthError(error);
+    return res.user;
+  };
 
   const readCache = (userId: string): SavedList[] | null => {
     try {
@@ -175,6 +186,35 @@ export function createSupabaseBackend(url: string, key: string): Backend {
 
     async signOut() {
       await sb.auth.signOut();
+    },
+
+    async updateName(name) {
+      const { data, error } = await sb.auth.updateUser({ data: { display_name: name.trim() } });
+      if (error) throw toAuthError(error);
+      return toUser(data.user);
+    },
+
+    async changeEmail(email) {
+      const { data, error } = await sb.auth.updateUser({ email: email.trim() }, { emailRedirectTo: redirect("account") });
+      if (error) throw toAuthError(error);
+      // With email confirmation on, the new address waits in new_email until its link is clicked.
+      return { needsConfirmation: !!data.user.new_email };
+    },
+
+    async changePassword(current, password) {
+      await verifyPassword(current);
+      const { error } = await sb.auth.updateUser({ password });
+      if (error) throw toAuthError(error);
+    },
+
+    async deleteAccount(password) {
+      const user = await verifyPassword(password);
+      // supabase/migrations/0003_delete_account.sql: deletes the caller's auth user; lists cascade.
+      const { error } = await sb.rpc("delete_my_account");
+      if (error) throw new AuthError("network", error.message);
+      localStorage.removeItem(cacheKey(user.id));
+      // The session's user no longer exists, so only clear it locally.
+      await sb.auth.signOut({ scope: "local" });
     },
 
     async listLists(userId) {

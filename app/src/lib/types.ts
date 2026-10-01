@@ -29,6 +29,8 @@ export type ListDraft = Omit<SavedList, "id" | "updatedAt">;
 
 export type AuthErrorCode =
   | "invalid_credentials"
+  | "wrong_password"
+  | "same_password"
   | "email_taken"
   | "email_not_confirmed"
   | "weak_password"
@@ -61,6 +63,15 @@ export interface Backend {
   requestPasswordReset(email: string): Promise<void>;
   updatePassword(password: string): Promise<void>;
   signOut(): Promise<void>;
+
+  /** Account settings. Each acts on the signed-in player. */
+  updateName(name: string): Promise<User>;
+  /** Resolves with needsConfirmation when the change waits on a link sent to the new address. */
+  changeEmail(email: string): Promise<{ needsConfirmation: boolean }>;
+  /** Throws wrong_password when `current` doesn't match. */
+  changePassword(current: string, next: string): Promise<void>;
+  /** Deletes the account and every list it owns, then signs out. Throws wrong_password when `password` doesn't match. */
+  deleteAccount(password: string): Promise<void>;
 
   listLists(userId: string): Promise<SavedList[]>;
   /** Resolves to null when the list doesn't exist or belongs to someone else. */

@@ -25,6 +25,7 @@ It has four sample lists, built from real game data. Silent Circuit is 5 DP over
 2. Run the files in `supabase/migrations/` in order in the SQL Editor:
    - `0001_lists.sql` creates the `lists` table, the `updated_at` trigger, and row-level security so each player only sees their own lists.
    - `0002_game_allegiances.sql` only matters for databases created before 0001 used the game's allegiances (`agents_of_light` / `servants_of_darkness`); on a new database it changes nothing.
+   - `0003_delete_account.sql` adds `delete_my_account()`, which lets a signed-in player delete their own account (their lists go with it). Account settings needs it.
 3. Authentication → URL Configuration:
    - Site URL: `http://localhost:5173` for now.
    - Redirect URLs: add `http://localhost:5173/**`.
@@ -42,7 +43,7 @@ The app picks Supabase automatically when both env vars are set (`src/lib/backen
 | `src/lib/backend/local.ts` | localStorage backend (dev/demo) |
 | `src/lib/backend/supabase.ts` | Supabase backend: PKCE auth, "Keep me signed in" via session/local storage, list cache for offline reads |
 | `src/lib/strings.ts` | User-facing auth error messages, keyed by code (ready for a Polish locale) |
-| `src/screens/*` | Screens; `MyLists` + `ListCard` + `AccountMenu`, and `Builder` (`/lists/new` and `/lists/:id`) |
+| `src/screens/*` | Screens; `MyLists` + `ListCard` + `AccountMenu`, `Account` (`/account`), and `Builder` (`/lists/new` and `/lists/:id`) |
 | `src/builder/data.json` | Game data extracted from the design bundle: factions, units, assets, game sizes, ally rules |
 | `src/builder/rulesText.json` | Rules text for the abilities and weapon traits the bundle had (5 abilities, 3 traits so far) |
 | `src/builder/rules.ts` | Typed game rules: ally eligibility, asset targets, force validation |
@@ -67,7 +68,9 @@ The app picks Supabase automatically when both env vars are set (`src/lib/backen
 - **Offline:** offline use is read-only. Supabase lists are cached, so My Lists and the builder open without a signal. Saving, duplicating or deleting while offline shows an error, and there is no queued sync yet.
 - **Google sign-in:** the button is shown but disabled ("coming soon") until the provider is set up. See step 4 under Connect Supabase.
 - **Custom email (SMTP):** to be set up at release. Until then, sign-up and reset emails use Supabase's rate-limited built-in mailer.
-- **Account settings:** not designed yet. The menu item shows a toast.
+- **Account settings** (`/account`, from the account menu): display name, email, password and delete account. Not in the design; built from the auth screens' styles.
+  - Changing email sends a confirmation link to the new address (with Supabase's "Secure email change" on, to the old one too). Like reset links, it must be opened in the same browser.
+  - Changing the password or deleting the account asks for the current password first.
 - **Terms and Privacy:** the links point to `#`.
 - **Hosting:** uses `BrowserRouter`, so the host must rewrite unknown paths to `index.html` (Vercel, Netlify and Cloudflare Pages all do this easily). Set `base` in `vite.config.ts` if serving from a sub-path.
 - **Departures from the design:**

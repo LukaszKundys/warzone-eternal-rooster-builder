@@ -270,6 +270,92 @@ describe("password reset", () => {
   });
 });
 
+describe("account settings", () => {
+  const section = (name: string) => screen.getByRole("form", { name });
+  const openSettings = async () => {
+    renderApp();
+    const user = await logIn();
+    await screen.findByText("4 saved lists");
+    await user.click(screen.getByRole("button", { name: /Commander Vale/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Account settings" }));
+    await screen.findByRole("heading", { name: "Display name" });
+    return user;
+  };
+  const logOutAndBackIn = async (user: ReturnType<typeof userEvent.setup>, email: string, password: string) => {
+    await user.click(screen.getByRole("link", { name: /My lists/ }));
+    await user.click(await screen.findByRole("button", { name: /Commander|Vale/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Log out" }));
+    await user.type(await screen.findByLabelText("Email"), email);
+    await user.type(screen.getByLabelText("Password", { selector: "input" }), password);
+    await user.click(screen.getByRole("button", { name: "Log in" }));
+  };
+
+  it("changes the display name", async () => {
+    const user = await openSettings();
+    const name = within(section("Display name")).getByLabelText("Display name");
+    await user.clear(name);
+    await user.type(name, "General Vale");
+    await user.click(screen.getByRole("button", { name: "Save name" }));
+    expect(await screen.findByText("Display name saved")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save name" })).toBeDisabled();
+    await user.click(screen.getByRole("link", { name: /My lists/ }));
+    expect(await screen.findByRole("button", { name: /General Vale/ })).toBeInTheDocument();
+  });
+
+  it("changes the email and logs in with the new one", async () => {
+    const user = await openSettings();
+    const email = within(section("Email")).getByLabelText("New email");
+    await user.type(email, DEMO_EMAIL);
+    await user.click(screen.getByRole("button", { name: "Change email" }));
+    expect(screen.getByText("That's already your email address.")).toBeInTheDocument();
+    await user.clear(email);
+    await user.type(email, "vale@example.com");
+    await user.click(screen.getByRole("button", { name: "Change email" }));
+    expect(await screen.findByText("Currently vale@example.com. You log in with this address.")).toBeInTheDocument();
+
+    await logOutAndBackIn(user, "vale@example.com", DEMO_PASSWORD);
+    expect(await screen.findByText("4 saved lists")).toBeInTheDocument();
+  });
+
+  it("changes the password only with the current one", async () => {
+    const user = await openSettings();
+    const pw = within(section("Password"));
+    await user.type(pw.getByLabelText("Current password", { selector: "input" }), "not-it");
+    await user.type(pw.getByLabelText("New password", { selector: "input" }), "Newpass123!");
+    await user.click(screen.getByRole("button", { name: "Change password" }));
+    expect(await pw.findByText("That password is incorrect.")).toBeInTheDocument();
+
+    await user.clear(pw.getByLabelText("Current password", { selector: "input" }));
+    await user.type(pw.getByLabelText("Current password", { selector: "input" }), DEMO_PASSWORD);
+    await user.click(screen.getByRole("button", { name: "Change password" }));
+    expect(await screen.findByText("Password updated")).toBeInTheDocument();
+
+    await logOutAndBackIn(user, DEMO_EMAIL, "Newpass123!");
+    expect(await screen.findByText("4 saved lists")).toBeInTheDocument();
+  });
+
+  it("deletes the account and its lists after confirming", async () => {
+    const user = await openSettings();
+    const del = within(section("Delete account"));
+    await user.type(del.getByLabelText("Password", { selector: "input" }), "not-it");
+    await user.click(del.getByRole("button", { name: "Delete account" }));
+    await user.click(await del.findByRole("button", { name: "Delete" }));
+    expect(await del.findByText("That password is incorrect.")).toBeInTheDocument();
+
+    await user.clear(del.getByLabelText("Password", { selector: "input" }));
+    await user.type(del.getByLabelText("Password", { selector: "input" }), DEMO_PASSWORD);
+    await user.click(del.getByRole("button", { name: "Delete account" }));
+    expect(del.getByText("Delete your account and all your lists permanently?")).toBeInTheDocument();
+    await user.click(del.getByRole("button", { name: "Cancel" }));
+    await user.click(del.getByRole("button", { name: "Delete account" }));
+    await user.click(del.getByRole("button", { name: "Delete" }));
+    expect(await screen.findByRole("heading", { name: "Log in" })).toBeInTheDocument();
+
+    await logIn();
+    expect(await screen.findByText("Email or password is incorrect.")).toBeInTheDocument();
+  });
+});
+
 describe("guards", () => {
   it("sends signed-out players from /lists to log in", async () => {
     renderApp("/lists");

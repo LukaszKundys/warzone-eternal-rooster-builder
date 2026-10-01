@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./lib/auth";
 import { ForgotPassword } from "./screens/ForgotPassword";
 import { Login } from "./screens/Login";
+import { Account } from "./screens/Account";
 import { Builder } from "./screens/Builder";
 import { MyLists } from "./screens/MyLists";
 import { ResetPassword } from "./screens/ResetPassword";
@@ -26,6 +27,7 @@ export function App() {
         {/* The reset link signs the player in, so this route must stay reachable with a session. */}
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/lists" element={user ? <MyLists user={user} /> : <Navigate to="/login" replace />} />
+        <Route path="/account" element={user ? <Account user={user} /> : <Navigate to="/login" replace />} />
         {/* /lists/new builds a new list; any other id edits that list. */}
         <Route path="/lists/:id" element={user ? <Builder user={user} /> : <Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to={user ? "/lists" : "/login"} replace />} />
