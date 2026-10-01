@@ -1,3 +1,4 @@
+import { ImportError, fromJson, toJson } from "../builder/exportList";
 import { counts, emptyForce, forceReducer, fromList, toDraft, type Force, type ForceAction } from "../builder/force";
 import { allyUnits, assetById, assetsFor, eligibleTargets, rosterUnits, typeName, unitById, validate } from "../builder/rules";
 
@@ -163,5 +164,39 @@ describe("data fixes", () => {
     expect(unitById("cybertronic_dr_diana_specialist")?.dg).toBe("specialist");
     const f = build(...faction("cybertronic"), ...add("cybertronic_dr_diana_specialist"));
     expect(f.units.map((x) => unitById(x.u)?.dg)).toEqual(["specialist"]);
+  });
+});
+
+describe("json import", () => {
+  const capitol = () => {
+    let f = build({ type: "setFaction", faction: "capitol" }, { type: "setGameSize", gameSize: 30 }, ...add("capitol_free_marine_leader"), ...add("capitol_free_marine_base", 2));
+    f = forceReducer(f, { type: "attach", asset: "air_strike", i: f.units[0].i });
+    return forceReducer(f, { type: "addForceAsset", asset: "supply_drop" });
+  };
+
+  it("reads back what it exports", () => {
+    const f = capitol();
+    const back = fromJson(toJson("Boardroom", f));
+    expect(back).toMatchObject({ name: "Boardroom", skipped: 0 });
+    expect(toDraft("x", back.force)).toEqual(toDraft("x", f));
+  });
+
+  it("leaves out unknown or illegal entries and counts them", () => {
+    const data = JSON.parse(toJson("Odd", capitol()));
+    data.units.push({ u: "no_such_unit", k: ["air_strike"] }); // unknown unit and its asset
+    data.units[1].k.push("command_helmet"); // a Free Marine trooper has no Command ability
+    data.forceAssets.push("supply_drop"); // already taken
+    const r = fromJson(JSON.stringify(data));
+    expect(r.skipped).toBe(4);
+    expect(r.force.units).toHaveLength(3);
+    expect(toDraft("x", r.force)).toEqual(toDraft("x", capitol()));
+  });
+
+  it("refuses files that aren't exports", () => {
+    expect(() => fromJson("not json")).toThrow(ImportError);
+    expect(() => fromJson("{}")).toThrow(/isn't a Warzone Eternal list export/);
+    expect(() => fromJson(JSON.stringify({ v: 1, faction: "cartel", gameSize: 40, allegiance: "agents_of_light", units: [], forceAssets: [] }))).toThrow(/faction/);
+    expect(() => fromJson(JSON.stringify({ v: 1, faction: "capitol", gameSize: 35, allegiance: "agents_of_light", units: [], forceAssets: [] }))).toThrow(/game size/);
+    expect(() => fromJson(JSON.stringify({ v: 1, faction: "capitol", gameSize: 40, allegiance: "agents_of_light", units: [{ u: 1 }], forceAssets: [] }))).toThrow(/format/);
   });
 });
