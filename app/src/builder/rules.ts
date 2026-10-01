@@ -94,10 +94,7 @@ export const DATA = rawData as unknown as GameData;
 
 export const STAT_KEYS = ["MV", "MW", "CC", "ST", "DEF", "AR", "W", "PW", "LD"] as const;
 
-// The data has one duplicated id (cybertronic_dr_diana_base, Leader and Specialist). Like the original
-// builder, the first entry wins.
-const unitIndex = new Map<string, Unit>();
-DATA.units.forEach((u) => unitIndex.has(u.id) || unitIndex.set(u.id, u));
+const unitIndex = new Map(DATA.units.map((u) => [u.id, u]));
 const assetIndex = new Map(DATA.assets.map((a) => [a.id, a]));
 export const unitById = (id: string) => unitIndex.get(id);
 export const assetById = (id: string) => assetIndex.get(id);
@@ -110,21 +107,32 @@ export function factionName(fid: string): string {
   return DATA.factions.find((x) => x.id === fid)?.name ?? fid;
 }
 
+/** "any_<group>" in a requirement means a Trooper of any type from that faction group. */
+const ANY_PREFIX = "any_";
+
 export function typeName(ty: string): string {
+  if (ty.startsWith(ANY_PREFIX)) return `any ${cap(ty.slice(ANY_PREFIX.length))}`;
   return DATA.typeNames[ty] || ty;
 }
 
+/**
+ * Whether a unit counts as an ally in a force of this faction. Units carry their ally designation
+ * (Dark Cult, Seconding, Advisor) everywhere, but it only applies when they join another faction.
+ */
+export const isAlly = (u: Unit, fid: string) => !!u.ally && u.f !== fid;
+
 /** The faction's own units. */
+/** The faction's own units, including those other factions can take as allies. */
 export function rosterUnits(fid: string): Unit[] {
-  return DATA.units.filter((u) => u.f === fid && !u.ally);
+  return DATA.units.filter((u) => u.f === fid);
 }
 
 /** Ally eligibility per DATA.allyDesignations: source group, forbidden force groups, and required allegiance. */
 export function allyUnits(fid: string, allegiance: Allegiance): Unit[] {
   const group = factionGroup(fid);
   return DATA.units.filter((u) => {
-    if (!u.ally) return false;
-    const rule = DATA.allyDesignations[u.ally];
+    if (!isAlly(u, fid)) return false;
+    const rule = DATA.allyDesignations[u.ally!];
     if (!rule) return false;
     if (factionGroup(u.f) !== rule.sourceGroup) return false;
     if (group && rule.forbiddenIfForceGroupIn.includes(group)) return false;
@@ -188,8 +196,10 @@ export type ForceCounts = Record<string, number>;
 export type KitCounts = Record<string, number>;
 
 function countTroopersOfTypes(force: ForceCounts, types: string[]): number {
+  const fits = (u: Unit) =>
+    types.some((t) => (t.startsWith(ANY_PREFIX) ? factionGroup(u.f) === t.slice(ANY_PREFIX.length) : t === u.ty));
   return DATA.units
-    .filter((u) => types.includes(u.ty) && u.dg === "trooper" && force[u.id])
+    .filter((u) => u.dg === "trooper" && force[u.id] && fits(u))
     .reduce((n, u) => n + force[u.id], 0);
 }
 
@@ -255,7 +265,7 @@ export function validate(
   const unitDp = inForce.reduce((n, u) => n + qty(u) * u.dp, 0);
   const kitDp = Object.keys(kit).reduce((n, id) => n + (assetById(id)?.dp ?? 0) * kit[id], 0);
   const dp = unitDp + kitDp;
-  const allyDp = inForce.filter((u) => u.ally).reduce((n, u) => n + qty(u) * u.dp, 0);
+  const allyDp = inForce.filter((u) => isAlly(u, fid)).reduce((n, u) => n + qty(u) * u.dp, 0);
   const allyLimit = Math.floor(gameSize * DATA.allyShare);
   const spAvail = inForce.reduce((n, u) => n + qty(u) * Math.max(0, u.sp), 0);
   const spSpent = inForce.reduce((n, u) => n + qty(u) * Math.max(0, -u.sp), 0);
@@ -280,7 +290,7 @@ export function validate(
         });
       }
     }
-    if (u.ally) {
+    if (isAlly(u, fid)) {
       const why = allyBlock(u, fid, allegiance, en);
       if (why) issues.push({ code: "ally_not_allowed", sev: "error", text: `${label}: ${why}` });
     }

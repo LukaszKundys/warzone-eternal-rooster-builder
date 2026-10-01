@@ -1,5 +1,5 @@
 import { counts, emptyForce, forceReducer, fromList, toDraft, type Force, type ForceAction } from "../builder/force";
-import { allyUnits, assetById, assetsFor, eligibleTargets, unitById, validate } from "../builder/rules";
+import { allyUnits, assetById, assetsFor, eligibleTargets, rosterUnits, typeName, unitById, validate } from "../builder/rules";
 
 const build = (...actions: ForceAction[]) => actions.reduce(forceReducer, emptyForce());
 const add = (unit: string, n = 1): ForceAction[] => Array.from({ length: n }, () => ({ type: "add", unit }));
@@ -119,5 +119,49 @@ describe("force", () => {
   it("opens a list saved before the builder existed", () => {
     const f = fromList({ faction: "Capitol", allegiance: "servants_of_darkness", limit: 30, roster: {} });
     expect(f).toMatchObject({ faction: "capitol", gameSize: 30, allegiance: "servants_of_darkness", units: [] });
+  });
+});
+
+describe("data fixes", () => {
+  const faction = (fid: string, allegiance: "agents_of_light" | "servants_of_darkness" = "agents_of_light"): ForceAction[] => [
+    { type: "setFaction", faction: fid },
+    { type: "setAllegiance", allegiance },
+  ];
+
+  it("gives a faction its own ally-designated units as ordinary units", () => {
+    // Algeroth's Troopers are Dark Cult allies for other factions, but plain Troopers for Algeroth.
+    expect(rosterUnits("algeroth").map((u) => u.id)).toContain("algeroth_necromutant_base");
+    let f = build(
+      ...faction("algeroth", "servants_of_darkness"),
+      ...add("algeroth_necromutant_leader"),
+      ...add("algeroth_undead_legionnaire_base", 2),
+    );
+    expect(check(f)).toMatchObject({ issues: [], allyDp: 0 });
+    // The Alpha Legionnaire asset now has an Undead Legionnaire to go on.
+    f = forceReducer(f, { type: "attach", asset: "alpha_legionnaire", i: f.units[1].i });
+    expect(f.units[1].k).toEqual(["alpha_legionnaire"]);
+
+    const brotherhood = build(...faction("brotherhood"), ...add("brotherhood_mortificator_leader"), ...add("brotherhood_mortificator_base"));
+    expect(check(brotherhood)).toMatchObject({ issues: [], allyDp: 0 });
+  });
+
+  it("reads 'any Brotherhood' as any Brotherhood Trooper", () => {
+    const leader = add("brotherhood_fury_elite_guard_leader");
+    expect(check(build(...faction("brotherhood"), ...leader)).issues[0].text).toBe(
+      "Fury Elite Guard // Leader needs 1 × Trooper of type any Brotherhood, 0 available",
+    );
+    expect(codes(build(...faction("brotherhood"), ...leader, ...add("brotherhood_sacred_warrior_base")))).toEqual([]);
+    expect(typeName("any_brotherhood")).toBe("any Brotherhood");
+  });
+
+  it("lets the Mirrorman Leader lead Mirrormen", () => {
+    expect(codes(build(...faction("cybertronic"), ...add("cybertronic_mirrorman_leader"), ...add("cybertronic_mirrorman_base")))).toEqual([]);
+  });
+
+  it("keeps Dr. Diana's Leader and Specialist apart", () => {
+    expect(unitById("cybertronic_dr_diana_base")?.dg).toBe("leader");
+    expect(unitById("cybertronic_dr_diana_specialist")?.dg).toBe("specialist");
+    const f = build(...faction("cybertronic"), ...add("cybertronic_dr_diana_specialist"));
+    expect(f.units.map((x) => unitById(x.u)?.dg)).toEqual(["specialist"]);
   });
 });
