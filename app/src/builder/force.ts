@@ -131,7 +131,7 @@ export function toStored(f: Force): StoredRoster {
 /** The list row for a force: summary columns for My Lists plus the full roster. */
 export function toDraft(name: string, f: Force): ListDraft {
   const { force, kit } = counts(f);
-  const v = validate(force, kit, f.gameSize);
+  const v = validate(force, kit, f.faction, f.gameSize, f.allegiance);
   return {
     name,
     faction: factionName(f.faction),
