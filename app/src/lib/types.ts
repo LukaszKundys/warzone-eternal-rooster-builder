@@ -23,9 +23,18 @@ export interface SavedList {
   unitCount: number;
   roster: unknown;
   updatedAt: string; // ISO timestamp
+  /** Set while the list is shared by link; null otherwise. */
+  shareId: string | null;
 }
 
-export type ListDraft = Omit<SavedList, "id" | "updatedAt">;
+/** What the builder saves. Sharing is changed separately (setSharing), so saving never touches it. */
+export type ListDraft = Omit<SavedList, "id" | "updatedAt" | "shareId">;
+
+/** A list opened from a share link: read-only, without its owner's id. */
+export interface SharedList extends ListDraft {
+  updatedAt: string;
+  ownerName: string;
+}
 
 export type AuthErrorCode =
   | "invalid_credentials"
@@ -79,4 +88,8 @@ export interface Backend {
   createList(userId: string, draft: ListDraft): Promise<SavedList>;
   updateList(userId: string, id: string, draft: ListDraft): Promise<SavedList>;
   deleteList(userId: string, id: string): Promise<void>;
+  /** Turn a list's share link on (returns the new share id) or off (returns null). */
+  setSharing(userId: string, id: string, on: boolean): Promise<string | null>;
+  /** Open a shared list. Works signed out. Null when the link is unknown or sharing was turned off. */
+  getSharedList(shareId: string): Promise<SharedList | null>;
 }

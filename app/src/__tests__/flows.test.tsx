@@ -356,6 +356,69 @@ describe("account settings", () => {
   });
 });
 
+describe("sharing", () => {
+  const card = (name: string) => screen.getByRole("heading", { name }).closest("article")!;
+  /** Share Iron Fist Vanguard from the builder and return its link path. */
+  const shareIronFist = async () => {
+    renderApp();
+    const user = await logIn();
+    await screen.findByText("4 saved lists");
+    await user.click(within(card("Iron Fist Vanguard")).getByRole("button", { name: "Edit" }));
+    await user.click(await screen.findByRole("button", { name: "Share" }));
+    await user.click(screen.getByRole("button", { name: "Create link" }));
+    const url = (await screen.findByLabelText("Share link")) as HTMLInputElement;
+    expect(screen.getByRole("button", { name: "Shared" })).toBeInTheDocument();
+    return { user, path: new URL(url.value).pathname };
+  };
+
+  it("needs a saved list before it can be shared", async () => {
+    renderApp();
+    const user = await logIn();
+    await screen.findByText("4 saved lists");
+    await user.click(screen.getAllByRole("button", { name: "+ New list" })[0]);
+    expect(await screen.findByRole("button", { name: "Share" })).toBeDisabled();
+  });
+
+  it("shows a shared list read-only to a signed-out viewer, who logs in to copy it", async () => {
+    const { user, path } = await shareIronFist();
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("link", { name: /My lists/ }));
+    expect(within(card("Iron Fist Vanguard")).getByText("Shared")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Commander Vale/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Log out" }));
+    await screen.findByRole("heading", { name: "Log in" });
+
+    cleanup();
+    renderApp(path);
+    expect(await screen.findByRole("heading", { name: "Iron Fist Vanguard" })).toBeInTheDocument();
+    expect(screen.getByText(/by Commander Vale/)).toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "Blitzer // Leader" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Remove/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Duplicate" })).not.toBeInTheDocument();
+
+    // Copying needs an account; logging in comes back here.
+    const viewer = userEvent.setup();
+    await viewer.click(screen.getByRole("button", { name: "Log in to copy" }));
+    await logIn();
+    await viewer.click(await screen.findByRole("button", { name: "Copy to my lists" }));
+    expect(await screen.findByLabelText("List name")).toHaveValue("Iron Fist Vanguard (copy)");
+    await viewer.click(screen.getByRole("link", { name: /My lists/ }));
+    expect(await screen.findByText("5 saved lists")).toBeInTheDocument();
+    // The copy is the viewer's own list and isn't shared.
+    expect(within(card("Iron Fist Vanguard (copy)")).queryByText("Shared")).not.toBeInTheDocument();
+  });
+
+  it("breaks the link when sharing stops", async () => {
+    const { user, path } = await shareIronFist();
+    await user.click(screen.getByRole("button", { name: "Stop sharing" }));
+    expect(await screen.findByRole("button", { name: "Create link" })).toBeInTheDocument();
+
+    cleanup();
+    renderApp(path);
+    expect(await screen.findByRole("heading", { name: "List not found" })).toBeInTheDocument();
+  });
+});
+
 describe("guards", () => {
   it("sends signed-out players from /lists to log in", async () => {
     renderApp("/lists");

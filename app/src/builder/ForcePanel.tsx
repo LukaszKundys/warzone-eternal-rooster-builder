@@ -6,7 +6,7 @@ import { UnitProfile } from "./UnitProfile";
 
 /** The force as a stack of printed unit cards, plus assets that apply to the whole force. */
 export function ForcePanel({ wide }: { wide: boolean }) {
-  const { force, qty, v, dispatch } = useBuilder();
+  const { force, qty, v, dispatch, readOnly } = useBuilder();
   const seen: Record<string, number> = {};
   const full = force.units.length >= MAX_UNITS;
 
@@ -24,7 +24,7 @@ export function ForcePanel({ wide }: { wide: boolean }) {
           if (!u) return null;
           seen[x.u] = (seen[x.u] || 0) + 1;
           const label = `${u.n} ${u.v}`.trim() + (qty[x.u] > 1 ? ` #${seen[x.u]}` : "");
-          const actions = (
+          const actions = readOnly ? null : (
             <>
               {u.dg !== "unique" && (
                 <button className="btn-quiet" disabled={full} onClick={() => dispatch({ type: "add", unit: u.id })}>{t.duplicate}</button>
@@ -47,7 +47,7 @@ export function ForcePanel({ wide }: { wide: boolean }) {
                     <div><small>DP</small>{u.dp}</div>
                     <div className={`sp ${spTone(u.sp)}`}><small>SP</small>{spText(u.sp)}</div>
                   </div>
-                  {wide && <div className="unit-card-actions">{actions}</div>}
+                  {wide && actions && <div className="unit-card-actions">{actions}</div>}
                 </div>
                 <UnitProfile unit={u} />
                 {x.k.length > 0 && (
@@ -56,12 +56,14 @@ export function ForcePanel({ wide }: { wide: boolean }) {
                     {x.k.map((aid, ki) => (
                       <span key={ki} className="kit-chip">
                         {assetById(aid)?.n ?? aid}
-                        <button aria-label={`Detach ${assetById(aid)?.n ?? aid}`} onClick={() => dispatch({ type: "detach", i: x.i, index: ki })}>✕</button>
+                        {!readOnly && (
+                          <button aria-label={`Detach ${assetById(aid)?.n ?? aid}`} onClick={() => dispatch({ type: "detach", i: x.i, index: ki })}>✕</button>
+                        )}
                       </span>
                     ))}
                   </div>
                 )}
-                {!wide && <div className="unit-card-foot">{actions}</div>}
+                {!wide && actions && <div className="unit-card-foot">{actions}</div>}
               </div>
             </article>
           );
@@ -79,7 +81,9 @@ export function ForcePanel({ wide }: { wide: boolean }) {
                     <div className="force-asset-fx">{a?.fx}</div>
                   </div>
                   <div className="force-asset-dp">{a?.dp ?? 0} DP</div>
-                  <button className="btn-danger-quiet square" aria-label={`Remove ${a?.n ?? x.a}`} onClick={() => dispatch({ type: "removeForceAsset", i: x.i })}>✕</button>
+                  {!readOnly && (
+                    <button className="btn-danger-quiet square" aria-label={`Remove ${a?.n ?? x.a}`} onClick={() => dispatch({ type: "removeForceAsset", i: x.i })}>✕</button>
+                  )}
                 </div>
               );
             })}
@@ -89,7 +93,7 @@ export function ForcePanel({ wide }: { wide: boolean }) {
         {force.units.length === 0 && force.forceAssets.length === 0 && (
           <div className="empty-box tall">
             <div className="empty-box-title">{t.rosterEmptyTitle}</div>
-            <div className="empty-box-body">{wide ? t.rosterEmptyBody : t.rosterEmptyBodyMobile}</div>
+            {!readOnly && <div className="empty-box-body">{wide ? t.rosterEmptyBody : t.rosterEmptyBodyMobile}</div>}
           </div>
         )}
       </div>

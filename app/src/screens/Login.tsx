@@ -1,4 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useReturnTo } from "../lib/useReturnTo";
 import { AuthLayout } from "../components/AuthLayout";
 import { Alert, PasswordField, TextField } from "../components/Fields";
 import { GoogleButton } from "./GoogleButton";
@@ -9,6 +10,8 @@ import { isEmail } from "../lib/validation";
 export function Login() {
   const { backend } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = useReturnTo();
   const form = useAuthForm({ email: "", pw: "", remember: true });
   const { f, set, errs } = form;
 
@@ -20,7 +23,7 @@ export function Login() {
       }),
       async (v) => {
         await backend.signIn(v.email, v.pw, v.remember);
-        navigate("/lists", { replace: true });
+        navigate(returnTo, { replace: true });
       },
     );
 
@@ -29,7 +32,7 @@ export function Login() {
       title="Log in"
       subtitle="Welcome back. Sign in to open your saved lists."
       onSubmit={onSubmit}
-      footer={<>New here? <Link to="/signup">Create an account</Link></>}
+      footer={<>New here? <Link to="/signup" state={location.state}>Create an account</Link></>}
     >
       <TextField label="Email" type="email" value={f.email} onChange={set("email")} error={errs.email} placeholder="you@example.com" autoComplete="email" />
       <PasswordField

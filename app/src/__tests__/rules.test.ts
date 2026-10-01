@@ -112,15 +112,12 @@ describe("force", () => {
     f = forceReducer(f, { type: "addForceAsset", asset: "supply_drop" });
     const draft = toDraft("Test", f);
     expect(draft).toMatchObject({ faction: "Capitol", allegiance: "agents_of_light", gameSize: "Standard", points: 15, limit: 40, unitCount: 3 });
-    const back = fromList({ ...draft, id: "x", updatedAt: "" });
+    const back = fromList(draft);
     expect(toDraft("Test", back)).toEqual(draft);
   });
 
   it("opens a list saved before the builder existed", () => {
-    const f = fromList({
-      id: "x", name: "Old", faction: "Capitol", allegiance: "servants_of_darkness", gameSize: "Small",
-      points: 0, limit: 30, unitCount: 0, roster: {}, updatedAt: "",
-    });
+    const f = fromList({ faction: "Capitol", allegiance: "servants_of_darkness", limit: 30, roster: {} });
     expect(f).toMatchObject({ faction: "capitol", gameSize: 30, allegiance: "servants_of_darkness", units: [] });
   });
 });

@@ -5,7 +5,7 @@ import {
   type SupportedStorage,
   type User as SbUser,
 } from "@supabase/supabase-js";
-import { AuthError, type Allegiance, type AuthErrorCode, type Backend, type ListDraft, type SavedList } from "../types";
+import { AuthError, type Allegiance, type AuthErrorCode, type Backend, type ListDraft, type SavedList, type SharedList } from "../types";
 
 /**
  * Supabase backend. Tables and access rules: supabase/migrations/0001_lists.sql.
@@ -64,6 +64,7 @@ interface ListRow {
   unit_count: number;
   roster: unknown;
   updated_at: string;
+  share_id: string | null;
 }
 
 const fromRow = (r: ListRow): SavedList => ({
@@ -77,9 +78,10 @@ const fromRow = (r: ListRow): SavedList => ({
   unitCount: r.unit_count,
   roster: r.roster,
   updatedAt: r.updated_at,
+  shareId: r.share_id,
 });
 
-const COLUMNS = "id,name,faction,allegiance,game_size,points,points_limit,unit_count,roster,updated_at";
+const COLUMNS = "id,name,faction,allegiance,game_size,points,points_limit,unit_count,roster,updated_at,share_id";
 
 const toRow = (d: ListDraft) => ({
   name: d.name,
@@ -253,6 +255,28 @@ export function createSupabaseBackend(url: string, key: string): Backend {
       const list = fromRow(data as ListRow);
       writeCache(userId, [list, ...(readCache(userId) ?? []).filter((l) => l.id !== id)]);
       return list;
+    },
+
+    async setSharing(userId, id, on) {
+      const shareId = on ? crypto.randomUUID() : null;
+      const { error } = await sb.from("lists").update({ share_id: shareId }).eq("id", id);
+      if (error) throw new AuthError("network", error.message);
+      writeCache(userId, (readCache(userId) ?? []).map((l) => (l.id === id ? { ...l, shareId } : l)));
+      return shareId;
+    },
+
+    async getSharedList(shareId) {
+      // supabase/migrations/0004_list_sharing.sql
+      const { data, error } = await sb.rpc("get_shared_list", { p_share_id: shareId });
+      if (error) {
+        // Not a uuid at all: treat like an unknown link.
+        if (error.code === "22P02") return null;
+        throw new AuthError("network", error.message);
+      }
+      const r = (data as (Omit<ListRow, "id" | "share_id"> & { owner_name: string })[])[0];
+      if (!r) return null;
+      const { id: _id, shareId: _s, ...list } = fromRow({ ...r, id: "", share_id: null });
+      return { ...list, ownerName: r.owner_name } satisfies SharedList;
     },
 
     async deleteList(userId, id) {

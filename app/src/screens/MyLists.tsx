@@ -51,7 +51,7 @@ export function MyLists({ user }: { user: User }) {
 
   const duplicate = async (l: SavedList) => {
     try {
-      const { id: _id, updatedAt: _u, ...draft } = l;
+      const { id: _id, updatedAt: _u, shareId: _s, ...draft } = l;
       const copy = await backend.createList(user.id, { ...draft, name: `${l.name} (copy)` });
       setLists((cur) => {
         const arr = (cur ?? []).slice();

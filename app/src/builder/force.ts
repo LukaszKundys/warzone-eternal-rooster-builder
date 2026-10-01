@@ -150,7 +150,7 @@ const isStored = (r: unknown): r is StoredRoster => !!r && typeof r === "object"
  * Rebuild a force from a saved list. Lists saved before the builder existed have no roster,
  * so their faction and size come from the summary columns. Unknown unit or asset ids are dropped.
  */
-export function fromList(l: SavedList): Force {
+export function fromList(l: Pick<SavedList, "faction" | "allegiance" | "limit" | "roster">): Force {
   const base = emptyForce();
   if (!isStored(l.roster)) {
     const faction = PLAYABLE_FACTIONS.find((x) => x.name === l.faction)?.id ?? base.faction;
