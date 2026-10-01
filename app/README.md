@@ -46,7 +46,7 @@ The app picks Supabase automatically when both env vars are set (`src/lib/backen
 ## Not done yet
 
 - **Builder:** Edit and New list only show a toast until the builder is moved into this app. Duplicate and Delete work for real.
-- **Supabase backend:** written and type-checked, but not yet run against a live project. The automated tests use the local backend.
+- **Supabase backend:** tested by hand against a live project. Sign-up with email confirmation, log-in, loading lists, Duplicate and Delete all work. Row-level security was also checked in the database. Password reset and Google sign-in have not been tried yet. The automated tests still use the local backend.
 - **Offline:** offline use is read-only. Supabase lists are cached, so My Lists opens without a signal. Duplicating or deleting while offline shows an error, and there is no queued sync yet.
 - **Account settings:** not designed yet. The menu item shows a toast.
 - **Terms and Privacy:** the links point to `#`.
