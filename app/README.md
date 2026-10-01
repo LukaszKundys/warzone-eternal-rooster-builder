@@ -17,7 +17,7 @@ With no `.env`, the app runs on the **local backend**: accounts and lists are st
 - email `demo@example.com`
 - password `Demo1234!`
 
-It has four sample lists. Google sign-in reports "not available" in local mode.
+It has four sample lists.
 
 ## Connect Supabase
 
@@ -27,8 +27,8 @@ It has four sample lists. Google sign-in reports "not available" in local mode.
    - Site URL: `http://localhost:5173` for now.
    - Redirect URLs: add `http://localhost:5173/**`.
    - Add the production origin once hosting is decided.
-4. Optional: turn on the Google provider (needs an OAuth client from Google Cloud Console).
-5. Before launch, set up custom SMTP. The built-in mailer is heavily rate-limited.
+4. Later: turn on the Google provider (needs an OAuth client from Google Cloud Console), then set `GOOGLE_ENABLED` to `true` in `src/screens/GoogleButton.tsx`.
+5. At release: set up custom SMTP. The built-in mailer is heavily rate-limited.
 
 The app picks Supabase automatically when both env vars are set (`src/lib/backend/index.ts`).
 
@@ -46,8 +46,10 @@ The app picks Supabase automatically when both env vars are set (`src/lib/backen
 ## Not done yet
 
 - **Builder:** Edit and New list only show a toast until the builder is moved into this app. Duplicate and Delete work for real.
-- **Supabase backend:** tested by hand against a live project. Sign-up with email confirmation, log-in, loading lists, Duplicate and Delete all work. Row-level security was also checked in the database. Password reset and Google sign-in have not been tried yet. The automated tests still use the local backend.
+- **Supabase backend:** tested by hand against a live project. Sign-up with email confirmation, log-in, loading lists, Duplicate and Delete all work. Row-level security was also checked in the database. Password reset has not been tried yet. The automated tests still use the local backend.
 - **Offline:** offline use is read-only. Supabase lists are cached, so My Lists opens without a signal. Duplicating or deleting while offline shows an error, and there is no queued sync yet.
+- **Google sign-in:** the button is shown but disabled ("coming soon") until the provider is set up. See step 4 under Connect Supabase.
+- **Custom email (SMTP):** to be set up at release. Until then, sign-up and reset emails use Supabase's rate-limited built-in mailer.
 - **Account settings:** not designed yet. The menu item shows a toast.
 - **Terms and Privacy:** the links point to `#`.
 - **Hosting:** uses `BrowserRouter`, so the host must rewrite unknown paths to `index.html` (Vercel, Netlify and Cloudflare Pages all do this easily). Set `base` in `vite.config.ts` if serving from a sub-path.
