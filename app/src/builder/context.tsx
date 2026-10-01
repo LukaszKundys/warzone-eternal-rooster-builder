@@ -36,7 +36,7 @@ export function BuilderProvider({
       qty,
       kit,
       inForce: DATA.units.filter((u) => qty[u.id]),
-      v: validate(qty, kit, force.gameSize),
+      v: validate(qty, kit, force.faction, force.gameSize, force.allegiance),
       peekUnit,
       peekAsset,
     };

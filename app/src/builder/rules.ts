@@ -1,4 +1,4 @@
-import type { Allegiance } from "../lib/types";
+import { ALLEGIANCE_LABEL, type Allegiance } from "../lib/types";
 import rawData from "./data.json";
 import rulesText from "./rulesText.json";
 
@@ -202,7 +202,8 @@ export interface Issue {
     | "dp_over_limit"
     | "sp_overspent"
     | "ally_share_exceeded"
-    | "asset_no_target";
+    | "asset_no_target"
+    | "ally_not_allowed";
   sev: "error" | "warn";
   text: string;
 }
@@ -221,7 +222,31 @@ export interface Validation {
   leaders: number;
 }
 
-export function validate(force: ForceCounts, kit: KitCounts, gameSize: number, lang: Lang = "en"): Validation {
+/** Why an ally can't join this force, or null when it can. Mirrors allyUnits(). */
+function allyBlock(u: Unit, fid: string, allegiance: Allegiance, en: boolean): string | null {
+  const rule = u.ally ? DATA.allyDesignations[u.ally] : undefined;
+  if (!rule) return null;
+  const kind = cap(u.ally!);
+  if (rule.requiresAllegiance && rule.requiresAllegiance !== allegiance) {
+    return en
+      ? `${kind} allies can only join ${ALLEGIANCE_LABEL[rule.requiresAllegiance]} forces`
+      : `sojusznicy ${kind} mogą dołączyć tylko do Sił ${ALLEGIANCE_LABEL[rule.requiresAllegiance]}`;
+  }
+  const group = factionGroup(fid);
+  if (factionGroup(u.f) !== rule.sourceGroup || (group && rule.forbiddenIfForceGroupIn.includes(group))) {
+    return en ? `${kind} allies can't join a ${factionName(fid)} force` : `sojusznicy ${kind} nie mogą dołączyć do Siły ${factionName(fid)}`;
+  }
+  return null;
+}
+
+export function validate(
+  force: ForceCounts,
+  kit: KitCounts,
+  fid: string,
+  gameSize: number,
+  allegiance: Allegiance,
+  lang: Lang = "en",
+): Validation {
   const en = lang !== "pl";
   const issues: Issue[] = [];
   const inForce = DATA.units.filter((u) => force[u.id]);
@@ -254,6 +279,10 @@ export function validate(force: ForceCounts, kit: KitCounts, gameSize: number, l
             : `${label} wymaga ${need} × Szeregowego typu ${types}, dostępnych ${have}`,
         });
       }
+    }
+    if (u.ally) {
+      const why = allyBlock(u, fid, allegiance, en);
+      if (why) issues.push({ code: "ally_not_allowed", sev: "error", text: `${label}: ${why}` });
     }
     if (u.dg === "unique" && qty(u) > 1) {
       issues.push({

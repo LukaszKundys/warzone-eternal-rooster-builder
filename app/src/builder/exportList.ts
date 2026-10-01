@@ -5,7 +5,7 @@ import { assetById, factionName, unitById, validate } from "./rules";
 /** Plain-text force list: header, units with attached assets, force assets, totals and issues. */
 export function toText(name: string, f: Force): string {
   const { force, kit } = counts(f);
-  const v = validate(force, kit, f.gameSize);
+  const v = validate(force, kit, f.faction, f.gameSize, f.allegiance);
   const lines = [
     name,
     `${factionName(f.faction)} · ${ALLEGIANCE_LABEL[f.allegiance]} · ${f.gameSize} DP (${sizeName(f.gameSize)})`,

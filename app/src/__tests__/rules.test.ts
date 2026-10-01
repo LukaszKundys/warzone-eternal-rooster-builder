@@ -5,7 +5,7 @@ const build = (...actions: ForceAction[]) => actions.reduce(forceReducer, emptyF
 const add = (unit: string, n = 1): ForceAction[] => Array.from({ length: n }, () => ({ type: "add", unit }));
 const check = (f: Force) => {
   const { force, kit } = counts(f);
-  return validate(force, kit, f.gameSize);
+  return validate(force, kit, f.faction, f.gameSize, f.allegiance);
 };
 const codes = (f: Force) => check(f).issues.map((i) => i.code);
 
@@ -36,6 +36,20 @@ describe("validate", () => {
   it("flags a force over the game size", () => {
     const f = build({ type: "setGameSize", gameSize: 20 }, ...add("bauhaus_blitzer_leader"), ...add("bauhaus_blitzer_base", 4));
     expect(check(f).issues.find((i) => i.code === "dp_over_limit")?.text).toBe("Force is 1 DP over the 20 DP limit");
+  });
+
+  it("rejects an ally the allegiance doesn't allow", () => {
+    // Seconding (Brotherhood) allies need Agents of Light.
+    const base = [...add("bauhaus_blitzer_leader"), ...add("bauhaus_blitzer_base"), ...add("brotherhood_mortificator_base")];
+    expect(codes(build(...base))).toEqual([]);
+    const dark = build(...base, { type: "setAllegiance", allegiance: "servants_of_darkness" });
+    expect(check(dark).issues).toEqual([
+      { code: "ally_not_allowed", sev: "error", text: "Mortificator: Seconding allies can only join Agents of Light forces" },
+    ]);
+    // Dark Cult allies need Servants of Darkness.
+    const cult = build(...add("bauhaus_blitzer_leader"), ...add("bauhaus_blitzer_base"), ...add("algeroth_necromutant_base"));
+    expect(codes(cult)).toEqual(["ally_not_allowed"]);
+    expect(codes(forceReducer(cult, { type: "setAllegiance", allegiance: "servants_of_darkness" }))).toEqual([]);
   });
 
   it("caps allies at a fifth of the game size", () => {
