@@ -159,6 +159,8 @@ export function createSupabaseBackend(url: string, key: string): Backend {
     },
 
     async requestPasswordReset(email) {
+      // The PKCE verifier for the emailed link must outlive this tab, because the link opens a new one.
+      localStorage.setItem(REMEMBER, "true");
       const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: redirect("reset-password") });
       // Don't reveal whether the address has an account; only surface transport problems.
       if (error && (isAuthRetryableFetchError(error) || error.status === 429)) throw toAuthError(error);
