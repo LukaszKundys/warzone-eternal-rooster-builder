@@ -17,6 +17,8 @@ export interface Builder {
   peekUnit: (id: string | null) => void;
   /** Open an asset's details (and its attach targets), or null to close it. */
   peekAsset: (id: string | null) => void;
+  /** Viewing someone's shared list: no editing controls. */
+  readOnly: boolean;
 }
 
 const Ctx = createContext<Builder | null>(null);
@@ -27,7 +29,8 @@ export function BuilderProvider({
   peekUnit,
   peekAsset,
   children,
-}: Pick<Builder, "force" | "dispatch" | "peekUnit" | "peekAsset"> & { children: ReactNode }) {
+  readOnly = false,
+}: Pick<Builder, "force" | "dispatch" | "peekUnit" | "peekAsset"> & { readOnly?: boolean; children: ReactNode }) {
   const value = useMemo(() => {
     const { force: qty, kit } = counts(force);
     return {
@@ -39,8 +42,9 @@ export function BuilderProvider({
       v: validate(qty, kit, force.faction, force.gameSize, force.allegiance),
       peekUnit,
       peekAsset,
+      readOnly,
     };
-  }, [force, dispatch, peekUnit, peekAsset]);
+  }, [force, dispatch, peekUnit, peekAsset, readOnly]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

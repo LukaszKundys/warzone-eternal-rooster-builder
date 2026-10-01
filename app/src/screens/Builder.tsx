@@ -8,6 +8,7 @@ import { ForcePanel } from "../builder/ForcePanel";
 import { AssetPeek, UnitPeek } from "../builder/Peeks";
 import { factionName } from "../builder/rules";
 import { SetupFields } from "../builder/SetupFields";
+import { ShareDialog } from "../builder/ShareDialog";
 import { StatusPanel } from "../builder/StatusPanel";
 import "../builder/builder.css";
 import { useToast } from "../components/Toast";
@@ -42,6 +43,8 @@ export function Builder({ user }: { user: User }) {
   const [saving, setSaving] = useState(false);
   const [unitPeek, setUnitPeek] = useState<string | null>(null);
   const [assetPeek, setAssetPeek] = useState<string | null>(null);
+  const [shareId, setShareId] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     // After the first save the URL moves from /lists/new to /lists/:id; the list is already loaded.
@@ -56,6 +59,7 @@ export function Builder({ user }: { user: User }) {
         dispatch({ type: "load", force: f });
         setName(l.name);
         setListId(l.id);
+        setShareId(l.shareId);
         setSaved({ name: l.name, force: f });
         setLoad("ready");
       },
@@ -134,6 +138,14 @@ export function Builder({ user }: { user: User }) {
       {wide && <SetupFields />}
       <div className="spacer" />
       {wide && <ClearForce />}
+      <button
+        className={shareId ? "btn-share on" : "btn-share"}
+        onClick={() => setSharing(true)}
+        disabled={!listId}
+        title={listId ? undefined : "Save the list first"}
+      >
+        {shareId ? "Shared" : "Share"}
+      </button>
       <button className="btn-save" onClick={save} disabled={saving || (!!saved && !dirty)}>
         {saving ? t.saving : saved && !dirty ? t.saved : t.save}
       </button>
@@ -155,6 +167,9 @@ export function Builder({ user }: { user: User }) {
         )}
         {unitPeek && <UnitPeek id={unitPeek} wide={wide} />}
         {assetPeek && <AssetPeek id={assetPeek} wide={wide} />}
+        {sharing && listId && (
+          <ShareDialog userId={user.id} listId={listId} shareId={shareId} onChange={setShareId} onClose={() => setSharing(false)} />
+        )}
       </div>
     </BuilderProvider>
   );

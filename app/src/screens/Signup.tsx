@@ -1,4 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useReturnTo } from "../lib/useReturnTo";
 import { AuthLayout } from "../components/AuthLayout";
 import { Alert, PasswordField, StrengthMeter, TextField } from "../components/Fields";
 import { GoogleButton } from "./GoogleButton";
@@ -9,6 +10,8 @@ import { isEmail } from "../lib/validation";
 export function Signup() {
   const { backend } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = useReturnTo();
   const form = useAuthForm({ name: "", email: "", pw: "", terms: false });
   const { f, set, errs } = form;
 
@@ -23,7 +26,7 @@ export function Signup() {
       async (v) => {
         const res = await backend.signUp(v.name, v.email, v.pw);
         if (res.needsConfirmation) form.setNotice(`Check your inbox. We sent a confirmation link to ${v.email.trim()}.`);
-        else navigate("/lists", { replace: true });
+        else navigate(returnTo, { replace: true });
       },
     );
 
@@ -32,7 +35,7 @@ export function Signup() {
       title="Create account"
       subtitle="Save your forces and pick them up on any device."
       onSubmit={onSubmit}
-      footer={<>Already have an account? <Link to="/login">Log in</Link></>}
+      footer={<>Already have an account? <Link to="/login" state={location.state}>Log in</Link></>}
     >
       <TextField label="Display name" value={f.name} onChange={set("name")} error={errs.name} placeholder="Commander name" autoComplete="nickname" />
       <TextField label="Email" type="email" value={f.email} onChange={set("email")} error={errs.email} placeholder="you@example.com" autoComplete="email" />

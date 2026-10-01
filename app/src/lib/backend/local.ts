@@ -1,5 +1,5 @@
 import { emptyForce, forceReducer, toDraft, type ForceAction } from "../../builder/force";
-import { AuthError, type Allegiance, type Backend, type ListDraft, type SavedList, type User } from "../types";
+import { AuthError, type Allegiance, type Backend, type ListDraft, type SavedList, type SharedList, type User } from "../types";
 
 /**
  * Browser-only backend for development and offline demos. Accounts and lists live in
@@ -48,7 +48,7 @@ function demoList(name: string, hoursAgo: number, setup: ForceAction[], units: [
     for (let i = 0; i < n; i++) f = forceReducer(f, { type: "add", unit: u });
   });
   assets.forEach((a) => (f = forceReducer(f, { type: "addForceAsset", asset: a })));
-  return { ...toDraft(name, f), id: crypto.randomUUID(), updatedAt: ago(hoursAgo * 3_600_000) };
+  return { ...toDraft(name, f), id: crypto.randomUUID(), updatedAt: ago(hoursAgo * 3_600_000), shareId: null };
 }
 
 function demoLists(): SavedList[] {
@@ -72,7 +72,11 @@ function demoLists(): SavedList[] {
 
 // Lists saved on this device before the builder used the game's allegiance names.
 const LEGACY_ALLEGIANCE: Record<string, Allegiance> = { Loyalist: "agents_of_light", Rebel: "servants_of_darkness" };
-const normalize = (l: SavedList): SavedList => (LEGACY_ALLEGIANCE[l.allegiance] ? { ...l, allegiance: LEGACY_ALLEGIANCE[l.allegiance] } : l);
+const normalize = (l: SavedList): SavedList => ({
+  ...l,
+  allegiance: LEGACY_ALLEGIANCE[l.allegiance] ?? l.allegiance,
+  shareId: l.shareId ?? null,
+});
 
 export function createLocalBackend(): Backend {
   const listeners = new Set<(u: User | null) => void>();
@@ -213,17 +217,37 @@ export function createLocalBackend(): Backend {
     },
 
     async createList(userId, draft: ListDraft) {
-      const list: SavedList = { ...draft, id: crypto.randomUUID(), updatedAt: new Date().toISOString() };
+      const list: SavedList = { ...draft, id: crypto.randomUUID(), updatedAt: new Date().toISOString(), shareId: null };
       write(localStorage, listsKey(userId), [list, ...stored(userId)]);
       return list;
     },
 
     async updateList(userId, id, draft: ListDraft) {
       const all = stored(userId);
-      if (!all.some((l) => l.id === id)) throw new Error("List not found");
-      const list: SavedList = { ...draft, id, updatedAt: new Date().toISOString() };
+      const old = all.find((l) => l.id === id);
+      if (!old) throw new Error("List not found");
+      const list: SavedList = { ...draft, id, updatedAt: new Date().toISOString(), shareId: old.shareId };
       write(localStorage, listsKey(userId), all.map((l) => (l.id === id ? list : l)));
       return list;
+    },
+
+    async setSharing(userId, id, on) {
+      const shareId = on ? crypto.randomUUID() : null;
+      write(localStorage, listsKey(userId), stored(userId).map((l) => (l.id === id ? { ...l, shareId } : l)));
+      return shareId;
+    },
+
+    // Local mode can only open links to lists saved in this browser.
+    async getSharedList(shareId) {
+      await ready;
+      for (const u of users()) {
+        const l = stored(u.id).find((x) => x.shareId === shareId);
+        if (l) {
+          const { id: _id, shareId: _s, ...rest } = l;
+          return { ...rest, ownerName: u.name } satisfies SharedList;
+        }
+      }
+      return null;
     },
 
     async deleteList(userId, id) {

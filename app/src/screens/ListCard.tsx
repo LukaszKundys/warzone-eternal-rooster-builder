@@ -38,6 +38,7 @@ export function ListCard({ list: l, confirming, onEdit, onDuplicate, onAskDelete
           <span>{l.gameSize}</span>
           <span>{l.unitCount} {l.unitCount === 1 ? "unit" : "units"}</span>
           <span>Edited {relativeTime(l.updatedAt)}</span>
+          {l.shareId && <span className="card-shared">Shared</span>}
         </div>
         {over && <div className="card-warn">⚠ {l.points - l.limit} DP over limit</div>}
       </div>
