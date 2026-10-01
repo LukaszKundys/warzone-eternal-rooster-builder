@@ -49,7 +49,7 @@ The app picks Supabase automatically when both env vars are set (`src/lib/backen
 | `src/builder/rulesText.json` | Rules text for the abilities and weapon traits the bundle had (5 abilities, 3 traits so far) |
 | `src/builder/rules.ts` | Typed game rules: ally eligibility, asset targets, force validation |
 | `src/builder/force.ts` | The force being built (reducer), and how it's saved into a list's `roster` |
-| `src/builder/*.tsx` | Builder panels: `Catalogue`, `ForcePanel`, `StatusPanel`, `UnitProfile`, unit/asset sheets |
+| `src/builder/*.tsx` | Builder panels: `Catalogue`, `ForcePanel`, `StatusPanel`, `UnitProfile`, unit/asset sheets, `ShareDialog`, `PrintSheet` |
 | `src/builder/builder.css` | Builder styles, values taken from the design files |
 | `src/styles.css` | Design tokens and styles, values taken from the design file |
 
@@ -58,7 +58,7 @@ The app picks Supabase automatically when both env vars are set (`src/lib/backen
 - **Builder:**
   - Below 1100px wide it uses the phone layout, with Catalogue, Force and Status tabs. At 1100px and wider it uses the three-column desktop layout.
   - Lists are saved with the Save button; there is no autosave. Leaving with unsaved changes asks first.
-  - Export: TXT and JSON download. PDF is shown but disabled ("coming soon"), and there is no JSON import yet.
+  - Export: TXT and JSON download, and PDF via a printable force sheet (`src/builder/PrintSheet.tsx`, `print.css`): the browser's print dialog opens, where "Save as PDF" makes the file. Identical units are grouped; abilities and traits with rules text are printed in full. There is no JSON import yet.
   - Most abilities and weapon traits have no rules text yet; the builder says so when one is opened.
   - Rules not enforced yet: the Dark Cult `singleSourceFaction` rule from the data.
   - Game data notes:
