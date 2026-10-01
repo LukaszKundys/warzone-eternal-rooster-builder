@@ -8,7 +8,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const flash = useCallback((t: string) => {
     setText(t);
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => setText(""), 2200);
+    // Long messages (import errors) stay up long enough to read.
+    timer.current = setTimeout(() => setText(""), Math.max(2200, t.length * 60));
   }, []);
   useEffect(() => () => clearTimeout(timer.current), []);
   return (

@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { ImportError, fromJson } from "../builder/exportList";
+import { toDraft } from "../builder/force";
 import { useToast } from "../components/Toast";
 import { useAuth } from "../lib/auth";
 import { ALLEGIANCE_LABEL, type Allegiance, type SavedList, type User } from "../lib/types";
@@ -80,8 +82,33 @@ export function MyLists({ user }: { user: User }) {
     navigate("/login", { replace: true });
   };
 
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+
+  /** Save a list exported as JSON (from this app) as a new list, then open it. */
+  const importFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // so picking the same file again still fires
+    if (!file) return;
+    setImporting(true);
+    try {
+      const { name, force, skipped } = fromJson(await file.text());
+      const list = await backend.createList(user.id, toDraft(name, force));
+      toast(skipped ? `Imported “${name}”. ${skipped} unknown or invalid ${skipped === 1 ? "entry was" : "entries were"} left out.` : `Imported “${name}”`);
+      navigate(`/lists/${list.id}`);
+    } catch (err) {
+      toast(err instanceof ImportError ? err.message : "Couldn't import the list. Check your connection.");
+      setImporting(false);
+    }
+  };
+
   const n = lists?.length ?? 0;
-  const newListButton = <button className="btn-primary md" onClick={() => openBuilder()}>+ New list</button>;
+  const newListButton = (
+    <div className="lists-actions">
+      <button className="btn-outline md" onClick={() => fileInput.current?.click()} disabled={importing}>Import list</button>
+      <button className="btn-primary md" onClick={() => openBuilder()}>+ New list</button>
+    </div>
+  );
 
   return (
     <>
@@ -92,6 +119,7 @@ export function MyLists({ user }: { user: User }) {
         <AccountMenu user={user} onSettings={() => navigate("/account")} onLogout={logout} />
       </header>
 
+      <input ref={fileInput} type="file" accept=".json,application/json" hidden onChange={importFile} aria-label="Import list file" />
       <main className="lists">
         <div className="lists-head">
           <div className="lists-head-text">

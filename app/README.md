@@ -58,7 +58,8 @@ The app picks Supabase automatically when both env vars are set (`src/lib/backen
 - **Builder:**
   - Below 1100px wide it uses the phone layout, with Catalogue, Force and Status tabs. At 1100px and wider it uses the three-column desktop layout.
   - Lists are saved with the Save button; there is no autosave. Leaving with unsaved changes asks first.
-  - Export: TXT and JSON download, and PDF via a printable force sheet (`src/builder/PrintSheet.tsx`, `print.css`): the browser's print dialog opens, where "Save as PDF" makes the file. Identical units are grouped; abilities and traits with rules text are printed in full. There is no JSON import yet.
+  - Export: TXT and JSON download, and PDF via a printable force sheet (`src/builder/PrintSheet.tsx`, `print.css`): the browser's print dialog opens, where "Save as PDF" makes the file. Identical units are grouped; abilities and traits with rules text are printed in full.
+  - Import: "Import list" on My Lists reads a JSON export and saves it as a new list. The force is rebuilt through the builder's rules, so units or assets this version doesn't know, or that break the rules (a second Unique, an asset on a unit that can't carry it), are left out and counted.
   - Most abilities and weapon traits have no rules text yet; the builder says so when one is opened.
   - Rules not enforced yet: the Dark Cult `singleSourceFaction` rule from the data.
   - Game data notes:

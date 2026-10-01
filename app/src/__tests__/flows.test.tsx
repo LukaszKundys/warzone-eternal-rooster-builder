@@ -356,6 +356,33 @@ describe("account settings", () => {
   });
 });
 
+describe("json import", () => {
+  it("imports an exported list as a new list and opens it", async () => {
+    renderApp();
+    const user = await logIn();
+    await screen.findByText("4 saved lists");
+    const file = new File(
+      [JSON.stringify({ v: 1, name: "From a friend", faction: "bauhaus", gameSize: 20, allegiance: "agents_of_light", units: [{ u: "bauhaus_blitzer_leader", k: [] }, { u: "bauhaus_blitzer_base", k: [] }, { u: "nope", k: [] }], forceAssets: [] })],
+      "from-a-friend.json",
+      { type: "application/json" },
+    );
+    await user.upload(screen.getByLabelText("Import list file"), file);
+    expect(await screen.findByLabelText("List name")).toHaveValue("From a friend");
+    expect(screen.getByText(/1 unknown or invalid entry was left out/)).toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: /My lists/ }));
+    expect(await screen.findByText("5 saved lists")).toBeInTheDocument();
+  });
+
+  it("explains a file that isn't an export", async () => {
+    renderApp();
+    const user = await logIn();
+    await screen.findByText("4 saved lists");
+    await user.upload(screen.getByLabelText("Import list file"), new File(["hello"], "notes.json", { type: "application/json" }));
+    expect(await screen.findByText("That file isn't a list export: it isn't valid JSON.")).toBeInTheDocument();
+    expect(screen.getByText("4 saved lists")).toBeInTheDocument();
+  });
+});
+
 describe("pdf export", () => {
   it("prints a force sheet and removes it afterwards", async () => {
     const print = vi.spyOn(window, "print").mockImplementation(() => {});
