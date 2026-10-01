@@ -5,7 +5,7 @@ import {
   type SupportedStorage,
   type User as SbUser,
 } from "@supabase/supabase-js";
-import { AuthError, type AuthErrorCode, type Backend, type SavedList } from "../types";
+import { AuthError, type Allegiance, type AuthErrorCode, type Backend, type ListDraft, type SavedList } from "../types";
 
 /**
  * Supabase backend. Tables and access rules: supabase/migrations/0001_lists.sql.
@@ -56,7 +56,7 @@ interface ListRow {
   id: string;
   name: string;
   faction: string;
-  allegiance: "Loyalist" | "Rebel";
+  allegiance: Allegiance;
   game_size: string;
   points: number;
   points_limit: number;
@@ -79,6 +79,17 @@ const fromRow = (r: ListRow): SavedList => ({
 });
 
 const COLUMNS = "id,name,faction,allegiance,game_size,points,points_limit,unit_count,roster,updated_at";
+
+const toRow = (d: ListDraft) => ({
+  name: d.name,
+  faction: d.faction,
+  allegiance: d.allegiance,
+  game_size: d.gameSize,
+  points: d.points,
+  points_limit: d.limit,
+  unit_count: d.unitCount,
+  roster: d.roster ?? {},
+});
 
 export function createSupabaseBackend(url: string, key: string): Backend {
   const sb = createClient(url, key, {
@@ -176,24 +187,29 @@ export function createSupabaseBackend(url: string, key: string): Backend {
       return lists;
     },
 
+    async getList(userId, id) {
+      const { data, error } = await sb.from("lists").select(COLUMNS).eq("id", id).maybeSingle();
+      if (error) {
+        const cached = readCache(userId)?.find((l) => l.id === id);
+        if (cached) return cached;
+        throw new AuthError("network", error.message);
+      }
+      return data ? fromRow(data as ListRow) : null;
+    },
+
     async createList(userId, d) {
-      const { data, error } = await sb
-        .from("lists")
-        .insert({
-          name: d.name,
-          faction: d.faction,
-          allegiance: d.allegiance,
-          game_size: d.gameSize,
-          points: d.points,
-          points_limit: d.limit,
-          unit_count: d.unitCount,
-          roster: d.roster ?? {},
-        })
-        .select(COLUMNS)
-        .single();
+      const { data, error } = await sb.from("lists").insert(toRow(d)).select(COLUMNS).single();
       if (error) throw new AuthError("network", error.message);
       const list = fromRow(data as ListRow);
       writeCache(userId, [list, ...(readCache(userId) ?? [])]);
+      return list;
+    },
+
+    async updateList(userId, id, d) {
+      const { data, error } = await sb.from("lists").update(toRow(d)).eq("id", id).select(COLUMNS).single();
+      if (error) throw new AuthError("network", error.message);
+      const list = fromRow(data as ListRow);
+      writeCache(userId, [list, ...(readCache(userId) ?? []).filter((l) => l.id !== id)]);
       return list;
     },
 

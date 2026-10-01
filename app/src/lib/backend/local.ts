@@ -1,4 +1,5 @@
-import { AuthError, type Backend, type ListDraft, type SavedList, type User } from "../types";
+import { emptyForce, forceReducer, toDraft, type ForceAction } from "../../builder/force";
+import { AuthError, type Allegiance, type Backend, type ListDraft, type SavedList, type User } from "../types";
 
 /**
  * Browser-only backend for development and offline demos. Accounts and lists live in
@@ -38,16 +39,38 @@ async function hash(email: string, password: string): Promise<string> {
 const toUser = ({ id, email, name }: StoredUser): User => ({ id, email, name });
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
 
+/** Build a demo list by replaying builder actions, so its roster and summary columns agree. */
+function demoList(name: string, hoursAgo: number, setup: ForceAction[], units: [string, number][], assets: string[] = []): SavedList {
+  let f = setup.reduce(forceReducer, emptyForce());
+  units.forEach(([u, n]) => {
+    for (let i = 0; i < n; i++) f = forceReducer(f, { type: "add", unit: u });
+  });
+  assets.forEach((a) => (f = forceReducer(f, { type: "addForceAsset", asset: a })));
+  return { ...toDraft(name, f), id: crypto.randomUUID(), updatedAt: ago(hoursAgo * 3_600_000) };
+}
+
 function demoLists(): SavedList[] {
-  const h = 3_600_000;
-  const base = { roster: null };
   return [
-    { ...base, id: crypto.randomUUID(), name: "Iron Fist Vanguard", faction: "Bauhaus", allegiance: "Loyalist", gameSize: "Standard", points: 148, limit: 150, unitCount: 9, updatedAt: ago(2 * h) },
-    { ...base, id: crypto.randomUUID(), name: "Boardroom Coup", faction: "Capitol", allegiance: "Loyalist", gameSize: "Skirmish", points: 71, limit: 75, unitCount: 5, updatedAt: ago(26 * h) },
-    { ...base, id: crypto.randomUUID(), name: "Silent Circuit", faction: "Cybertronic", allegiance: "Loyalist", gameSize: "Standard", points: 162, limit: 150, unitCount: 11, updatedAt: ago(72 * h) },
-    { ...base, id: crypto.randomUUID(), name: "Test roster", faction: "Bauhaus", allegiance: "Loyalist", gameSize: "Patrol", points: 0, limit: 100, unitCount: 0, updatedAt: ago(8 * 24 * h) },
+    demoList("Iron Fist Vanguard", 2, [{ type: "setFaction", faction: "bauhaus" }], [
+      ["bauhaus_blitzer_leader", 1], ["bauhaus_blitzer_base", 3], ["bauhaus_blitzer_operator", 1], ["bauhaus_blitzer_flamethrower", 1],
+      ["bauhaus_venusian_ranger_leader", 1], ["bauhaus_venusian_ranger_base", 2],
+    ], ["fire_support"]),
+    demoList("Boardroom Coup", 26, [{ type: "setFaction", faction: "capitol" }, { type: "setGameSize", gameSize: 30 }], [
+      ["capitol_free_marine_leader", 1], ["capitol_free_marine_base", 3], ["capitol_free_marine_medic", 1], ["capitol_free_marine_rpg", 1],
+    ], ["supply_drop"]),
+    demoList("Silent Circuit", 72, [{ type: "setFaction", faction: "cybertronic" }], [
+      ["cybertronic_chasseur_leader", 1], ["cybertronic_chasseur_base", 4], ["cybertronic_chasseur_operator", 1], ["cybertronic_chasseur_hmg", 1],
+      ["cybertronic_attila_base", 1], ["cybertronic_attila_hmg", 1],
+    ]),
+    demoList("Test roster", 8 * 24, [
+      { type: "setFaction", faction: "algeroth" }, { type: "setGameSize", gameSize: 20 }, { type: "setAllegiance", allegiance: "servants_of_darkness" },
+    ], []),
   ];
 }
+
+// Lists saved on this device before the builder used the game's allegiance names.
+const LEGACY_ALLEGIANCE: Record<string, Allegiance> = { Loyalist: "agents_of_light", Rebel: "servants_of_darkness" };
+const normalize = (l: SavedList): SavedList => (LEGACY_ALLEGIANCE[l.allegiance] ? { ...l, allegiance: LEGACY_ALLEGIANCE[l.allegiance] } : l);
 
 export function createLocalBackend(): Backend {
   const listeners = new Set<(u: User | null) => void>();
@@ -72,6 +95,8 @@ export function createLocalBackend(): Backend {
     write(localStorage, USERS, [demo]);
     write(localStorage, listsKey(demo.id), demoLists());
   })();
+
+  const stored = (userId: string) => read(localStorage, listsKey(userId), [] as SavedList[]).map(normalize);
 
   const current = (): StoredUser | null => {
     const id = sessionId();
@@ -133,18 +158,30 @@ export function createLocalBackend(): Backend {
 
     async listLists(userId) {
       await ready;
-      const lists = read(localStorage, listsKey(userId), [] as SavedList[]);
-      return lists.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      return stored(userId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    },
+
+    async getList(userId, id) {
+      await ready;
+      return stored(userId).find((l) => l.id === id) ?? null;
     },
 
     async createList(userId, draft: ListDraft) {
       const list: SavedList = { ...draft, id: crypto.randomUUID(), updatedAt: new Date().toISOString() };
-      write(localStorage, listsKey(userId), [list, ...read(localStorage, listsKey(userId), [] as SavedList[])]);
+      write(localStorage, listsKey(userId), [list, ...stored(userId)]);
+      return list;
+    },
+
+    async updateList(userId, id, draft: ListDraft) {
+      const all = stored(userId);
+      if (!all.some((l) => l.id === id)) throw new Error("List not found");
+      const list: SavedList = { ...draft, id, updatedAt: new Date().toISOString() };
+      write(localStorage, listsKey(userId), all.map((l) => (l.id === id ? list : l)));
       return list;
     },
 
     async deleteList(userId, id) {
-      write(localStorage, listsKey(userId), read(localStorage, listsKey(userId), [] as SavedList[]).filter((l) => l.id !== id));
+      write(localStorage, listsKey(userId), stored(userId).filter((l) => l.id !== id));
     },
   };
 }

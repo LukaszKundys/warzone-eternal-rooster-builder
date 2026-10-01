@@ -1,4 +1,9 @@
-export type Allegiance = "Loyalist" | "Rebel";
+export type Allegiance = "agents_of_light" | "servants_of_darkness";
+
+export const ALLEGIANCE_LABEL: Record<Allegiance, string> = {
+  agents_of_light: "Agents of Light",
+  servants_of_darkness: "Servants of Darkness",
+};
 
 export interface User {
   id: string;
@@ -6,15 +11,15 @@ export interface User {
   name: string;
 }
 
-/** A saved roster as shown on My Lists. `roster` is owned by the builder and opaque here. */
+/** A saved roster as shown on My Lists. `roster` is owned by the builder (src/builder/force.ts) and opaque here. */
 export interface SavedList {
   id: string;
   name: string;
   faction: string;
   allegiance: Allegiance;
-  gameSize: string;
-  points: number;
-  limit: number;
+  gameSize: string; // size name, e.g. "Standard"
+  points: number; // DP used
+  limit: number; // DP limit
   unitCount: number;
   roster: unknown;
   updatedAt: string; // ISO timestamp
@@ -58,6 +63,9 @@ export interface Backend {
   signOut(): Promise<void>;
 
   listLists(userId: string): Promise<SavedList[]>;
+  /** Resolves to null when the list doesn't exist or belongs to someone else. */
+  getList(userId: string, id: string): Promise<SavedList | null>;
   createList(userId: string, draft: ListDraft): Promise<SavedList>;
+  updateList(userId: string, id: string, draft: ListDraft): Promise<SavedList>;
   deleteList(userId: string, id: string): Promise<void>;
 }

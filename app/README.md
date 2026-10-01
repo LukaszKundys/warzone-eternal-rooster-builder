@@ -1,6 +1,6 @@
 # Warzone Eternal — app
 
-React + TypeScript + Vite app for the roster builder. So far it has the account flows from the Claude Design handoff (`Account Flows.dc.html`): Log in, Sign up, Forgot password, Set new password, and My Lists. The roster builder itself still lives in `../index.html` and has not been moved in yet.
+React + TypeScript + Vite app for the Warzone Eternal roster builder. It has the account flows from the Claude Design handoff (`Account Flows.dc.html`): Log in, Sign up, Forgot password, Set new password and My Lists. It also has the roster builder from `Catalogue.dc.html` (phone) and `Catalogue - Wide.dc.html` (desktop), which used to be a single bundled page at `../index.html`.
 
 ## Run it
 
@@ -17,12 +17,14 @@ With no `.env`, the app runs on the **local backend**: accounts and lists are st
 - email `demo@example.com`
 - password `Demo1234!`
 
-It has four sample lists.
+It has four sample lists, built from real game data. Silent Circuit is 5 DP over its limit on purpose.
 
 ## Connect Supabase
 
 1. Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (Project Settings → API). Never use the `service_role` / secret key here.
-2. Run `supabase/migrations/0001_lists.sql` in the SQL Editor. It creates the `lists` table, the `updated_at` trigger, and row-level security so each player only sees their own lists.
+2. Run the files in `supabase/migrations/` in order in the SQL Editor:
+   - `0001_lists.sql` creates the `lists` table, the `updated_at` trigger, and row-level security so each player only sees their own lists.
+   - `0002_game_allegiances.sql` switches allegiance to the game's `agents_of_light` / `servants_of_darkness`.
 3. Authentication → URL Configuration:
    - Site URL: `http://localhost:5173` for now.
    - Redirect URLs: add `http://localhost:5173/**`.
@@ -40,20 +42,37 @@ The app picks Supabase automatically when both env vars are set (`src/lib/backen
 | `src/lib/backend/local.ts` | localStorage backend (dev/demo) |
 | `src/lib/backend/supabase.ts` | Supabase backend: PKCE auth, "Keep me signed in" via session/local storage, list cache for offline reads |
 | `src/lib/strings.ts` | User-facing auth error messages, keyed by code (ready for a Polish locale) |
-| `src/screens/*` | Screens; `MyLists` + `ListCard` + `AccountMenu` |
+| `src/screens/*` | Screens; `MyLists` + `ListCard` + `AccountMenu`, and `Builder` (`/lists/new` and `/lists/:id`) |
+| `src/builder/data.json` | Game data extracted from the design bundle: factions, units, assets, game sizes, ally rules |
+| `src/builder/rulesText.json` | Rules text for the abilities and weapon traits the bundle had (5 abilities, 3 traits so far) |
+| `src/builder/rules.ts` | Typed game rules: ally eligibility, asset targets, force validation |
+| `src/builder/force.ts` | The force being built (reducer), and how it's saved into a list's `roster` |
+| `src/builder/*.tsx` | Builder panels: `Catalogue`, `ForcePanel`, `StatusPanel`, `UnitProfile`, unit/asset sheets |
+| `src/builder/builder.css` | Builder styles, values taken from the design files |
 | `src/styles.css` | Design tokens and styles, values taken from the design file |
 
 ## Not done yet
 
-- **Builder:** Edit and New list only show a toast until the builder is moved into this app. Duplicate and Delete work for real.
+- **Builder:**
+  - Below 1100px wide it uses the phone layout, with Catalogue, Force and Status tabs. At 1100px and wider it uses the three-column desktop layout.
+  - Lists are saved with the Save button; there is no autosave. Leaving with unsaved changes asks first.
+  - Export: TXT and JSON download. PDF is shown but disabled ("coming soon"), and there is no JSON import yet.
+  - Most abilities and weapon traits have no rules text yet; the builder says so when one is opened.
+  - Rules not enforced yet: the Dark Cult `singleSourceFaction` rule from the data.
+  - Data problems carried over from the design bundle:
+    - Dr Diana's Leader and Specialist profiles share the id `cybertronic_dr_diana_base`, so only the Leader can be added.
+    - The Mirrorman Leader needs Troopers of type `mirrormen`, but the Mirrorman Trooper is type `mirrormans`, so it always shows a requirement issue.
+    - Cartel is marked partial and isn't offered as a faction; its Agents still appear as Advisor allies.
 - **Supabase backend:** tested by hand against a live project. Sign-up with email confirmation, log-in, loading lists, Duplicate and Delete all work. Row-level security was also checked in the database. Password reset has not been tried yet. The automated tests still use the local backend.
-- **Offline:** offline use is read-only. Supabase lists are cached, so My Lists opens without a signal. Duplicating or deleting while offline shows an error, and there is no queued sync yet.
+- **Offline:** offline use is read-only. Supabase lists are cached, so My Lists and the builder open without a signal. Saving, duplicating or deleting while offline shows an error, and there is no queued sync yet.
 - **Google sign-in:** the button is shown but disabled ("coming soon") until the provider is set up. See step 4 under Connect Supabase.
 - **Custom email (SMTP):** to be set up at release. Until then, sign-up and reset emails use Supabase's rate-limited built-in mailer.
 - **Account settings:** not designed yet. The menu item shows a toast.
 - **Terms and Privacy:** the links point to `#`.
 - **Hosting:** uses `BrowserRouter`, so the host must rewrite unknown paths to `index.html` (Vercel, Netlify and Cloudflare Pages all do this easily). Set `base` in `vite.config.ts` if serving from a sub-path.
 - **Departures from the design:**
-  - The prototype's screen-switcher bar is gone. It was there only for the demo.
+  - The prototype's screen-switcher bar is gone (account flows and the builder's Mobile/Desktop toggle). It was there only for the demo; the builder picks its layout from the screen width.
+  - The builder has a top bar with a back link, the list name and Save. The design had no way to name or save a list.
+  - Changing faction asks before clearing the force.
   - Set new password is a new screen; the design had no screen for the emailed link.
   - Below 440px the account button shows only the avatar, so the title stays on one line.
