@@ -2,12 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../components/Toast";
 import { useAuth } from "../lib/auth";
-import type { SavedList, User } from "../lib/types";
+import { ALLEGIANCE_LABEL, type Allegiance, type SavedList, type User } from "../lib/types";
 import { AccountMenu } from "./AccountMenu";
 import { ListCard } from "./ListCard";
 
-const FILTERS = ["All", "Loyalist", "Rebel", "Over limit"] as const;
-type Filter = (typeof FILTERS)[number];
+type Filter = "all" | "over" | Allegiance;
+const FILTERS: [Filter, string][] = [
+  ["all", "All"],
+  ["agents_of_light", ALLEGIANCE_LABEL.agents_of_light],
+  ["servants_of_darkness", ALLEGIANCE_LABEL.servants_of_darkness],
+  ["over", "Over limit"],
+];
 
 export function MyLists({ user }: { user: User }) {
   const { backend } = useAuth();
@@ -15,7 +20,7 @@ export function MyLists({ user }: { user: User }) {
   const toast = useToast();
   const [lists, setLists] = useState<SavedList[] | null>(null);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<Filter>("All");
+  const [filter, setFilter] = useState<Filter>("all");
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,12 +43,11 @@ export function MyLists({ user }: { user: User }) {
     return (lists ?? []).filter(
       (l) =>
         (!q || (l.name + " " + l.faction).toLowerCase().includes(q)) &&
-        (filter === "All" || (filter === "Over limit" ? l.points > l.limit : l.allegiance === filter)),
+        (filter === "all" || (filter === "over" ? l.points > l.limit : l.allegiance === filter)),
     );
   }, [lists, query, filter]);
 
-  // The builder isn't part of this app yet; these become navigations once it is.
-  const openBuilder = (l?: SavedList) => toast(l ? `“${l.name}” will open in the builder once it's connected.` : "New lists will open in the builder once it's connected.");
+  const openBuilder = (l?: SavedList) => navigate(l ? `/lists/${l.id}` : "/lists/new");
 
   const duplicate = async (l: SavedList) => {
     try {
@@ -101,8 +105,8 @@ export function MyLists({ user }: { user: User }) {
           <div className="toolbar">
             <input className="search" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search lists" aria-label="Search lists" />
             <div className="filters" role="group" aria-label="Filter lists">
-              {FILTERS.map((label) => (
-                <button key={label} className="chip" aria-pressed={filter === label} onClick={() => setFilter(label)}>{label}</button>
+              {FILTERS.map(([key, label]) => (
+                <button key={key} className="chip" aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>
               ))}
             </div>
           </div>
