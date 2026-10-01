@@ -41,7 +41,7 @@ export function Catalogue({ wide }: { wide: boolean }) {
 
   const query = q.trim().toLowerCase();
   const match = (u: Unit) =>
-    (!query || `${u.n} ${u.v} ${typeName(u.ty)} ${u.a.join(" ")} ${desigLabel(u)}`.toLowerCase().includes(query)) &&
+    (!query || `${u.n} ${u.v} ${typeName(u.ty)} ${u.a.join(" ")} ${desigLabel(u, force.faction)}`.toLowerCase().includes(query)) &&
     (!desig.length || desig.includes(u.dg)) &&
     (!types.length || types.includes(u.ty));
 
@@ -55,7 +55,7 @@ export function Catalogue({ wide }: { wide: boolean }) {
     const n = qty[u.id] || 0;
     const uniqueTaken = u.dg === "unique" && n > 0;
     return {
-      key: u.id + u.dg, name: u.n, variant: u.v, meta: unitMeta(u), dp: u.dp, sp: u.sp, qty: n,
+      key: u.id + u.dg, name: u.n, variant: u.v, meta: unitMeta(u, force.faction), dp: u.dp, sp: u.sp, qty: n,
       canAdd: !uniqueTaken && !full, blocked: false, tone: n ? "taken" : "open",
       reason: uniqueTaken ? { mark: "✓", text: t.uniqueTaken, tone: "ok" } : undefined,
       peek: () => b.peekUnit(u.id),

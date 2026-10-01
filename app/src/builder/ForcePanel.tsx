@@ -41,7 +41,7 @@ export function ForcePanel({ wide }: { wide: boolean }) {
                 <div className="unit-card-head">
                   <div className="unit-card-title">
                     <h3>{u.n} <span className="variant">{u.v}</span> {qty[x.u] > 1 && <span className="inst">#{seen[x.u]}</span>}</h3>
-                    <div className="meta">{unitMeta(u)}</div>
+                    <div className="meta">{unitMeta(u, force.faction)}</div>
                   </div>
                   <div className="cost-box">
                     <div><small>DP</small>{u.dp}</div>

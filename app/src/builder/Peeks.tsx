@@ -45,7 +45,7 @@ export function UnitPeek({ id, wide }: { id: string; wide: boolean }) {
     <Sheet wide={wide} label={`${u.n} ${u.v}`.trim()} onClose={close}>
       <SheetHead
         title={<>{u.n} <span className="variant">{u.v}</span></>}
-        sub={unitMeta(u)}
+        sub={unitMeta(u, force.faction)}
         onClose={close}
         cost={
           <div className="cat-row-cost">

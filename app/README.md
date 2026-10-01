@@ -61,9 +61,10 @@ The app picks Supabase automatically when both env vars are set (`src/lib/backen
   - Export: TXT and JSON download. PDF is shown but disabled ("coming soon"), and there is no JSON import yet.
   - Most abilities and weapon traits have no rules text yet; the builder says so when one is opened.
   - Rules not enforced yet: the Dark Cult `singleSourceFaction` rule from the data.
-  - Data problems carried over from the design bundle:
-    - Dr Diana's Leader and Specialist profiles share the id `cybertronic_dr_diana_base`, so only the Leader can be added.
-    - The Mirrorman Leader needs Troopers of type `mirrormen`, but the Mirrorman Trooper is type `mirrormans`, so it always shows a requirement issue.
+  - Game data notes:
+    - Ally designations (Dark Cult, Seconding, Advisor) only apply when a unit joins another faction's force. In its own faction it's an ordinary unit and doesn't count toward the ally cap.
+    - A requirement of `any_<group>` (Fury Elite Guard Leader: `any_brotherhood`) means a Trooper of any type from that faction group.
+    - Fixed from the design bundle: Dr. Diana's Specialist has its own id (`cybertronic_dr_diana_specialist`; the Leader keeps `cybertronic_dr_diana_base`), and the Mirrorman Leader's requirement typo (`mirrormen`) is now `mirrormans`.
     - Cartel is marked partial and isn't offered as a faction; its Agents still appear as Advisor allies.
 - **Supabase backend:** tested by hand against a live project. Sign-up with email confirmation, log-in, loading lists, Duplicate and Delete all work. Row-level security was also checked in the database. Password reset links must be opened in the same browser that requested them; Supabase's PKCE flow completes the link with a value stored in that browser when the reset was requested, so a link opened on another device or browser shows the "invalid or expired" message. The automated tests still use the local backend.
 - **Offline:** offline use is read-only. Supabase lists are cached, so My Lists and the builder open without a signal. Saving, duplicating or deleting while offline shows an error, and there is no queued sync yet.
