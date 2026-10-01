@@ -68,7 +68,6 @@ export const t = {
   exportPdf: "Printable force sheet",
   exportTxt: "Plain text list",
   exportJson: "Force data file",
-  comingSoon: "coming soon",
   dpNote: (left: number, lim: number) => (left >= 0 ? `${left} DP remaining of ${lim}` : `${Math.abs(left)} DP over the limit`),
   spNote: (spent: number, avail: number) => `${spent} spent of ${avail} available`,
 };

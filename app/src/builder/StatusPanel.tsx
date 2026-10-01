@@ -1,6 +1,7 @@
 import { useBuilder } from "./context";
 import { t } from "./copy";
 import { download, toJson, toText } from "./exportList";
+import { printForce } from "./PrintSheet";
 
 const pct = (n: number, of: number) => `${of ? Math.min(100, Math.round((n / of) * 100)) : 0}%`;
 
@@ -75,8 +76,8 @@ export function StatusPanel({ name, wide }: { name: string; wide: boolean }) {
 
       <h3 className="status-k">{t.export}</h3>
       <div className="exports">
-        <button className="export-btn" disabled>
-          <span className="mark">PDF</span><span>{t.exportPdf}</span><span className="soon">{t.comingSoon}</span>
+        <button className="export-btn" onClick={() => printForce(name, force)}>
+          <span className="mark">PDF</span><span>{t.exportPdf}</span>
         </button>
         <button className="export-btn" onClick={() => download(name, "txt", toText(name, force))}>
           <span className="mark">TXT</span><span>{t.exportTxt}</span>

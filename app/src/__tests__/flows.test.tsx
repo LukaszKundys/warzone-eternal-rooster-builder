@@ -356,6 +356,32 @@ describe("account settings", () => {
   });
 });
 
+describe("pdf export", () => {
+  it("prints a force sheet and removes it afterwards", async () => {
+    const print = vi.spyOn(window, "print").mockImplementation(() => {});
+    renderApp();
+    const user = await logIn();
+    await screen.findByText("4 saved lists");
+    const card = screen.getByRole("heading", { name: "Iron Fist Vanguard" }).closest("article")!;
+    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    await user.click(await screen.findByRole("button", { name: /^Status/ }));
+    await user.click(screen.getByRole("button", { name: /Printable force sheet/ }));
+
+    await vi.waitFor(() => expect(print).toHaveBeenCalled());
+    const sheet = document.querySelector(".print-sheet") as HTMLElement;
+    expect(within(sheet).getByRole("heading", { name: "Iron Fist Vanguard" })).toBeInTheDocument();
+    expect(within(sheet).getByText("Bauhaus · Agents of Light · 40 DP (Standard)")).toBeInTheDocument();
+    // Identical units are grouped.
+    expect(within(sheet).getByRole("heading", { name: "3 × Blitzer" })).toBeInTheDocument();
+    expect(within(sheet).getByText("Fire Support")).toBeInTheDocument();
+    expect(within(sheet).getByText("Legal")).toBeInTheDocument();
+
+    window.dispatchEvent(new Event("afterprint"));
+    await vi.waitFor(() => expect(document.querySelector(".print-sheet")).toBeNull());
+    print.mockRestore();
+  });
+});
+
 describe("sharing", () => {
   const card = (name: string) => screen.getByRole("heading", { name }).closest("article")!;
   /** Share Iron Fist Vanguard from the builder and return its link path. */

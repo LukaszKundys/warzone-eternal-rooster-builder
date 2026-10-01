@@ -1,0 +1,37 @@
+/* Force sheet for printing / "Save as PDF" (PrintSheet.tsx). Black on white, compact, no app chrome. */
+@media screen {
+  .print-sheet { display: none; }
+}
+
+@media print {
+  @page { margin: 12mm; }
+  html, body { background: #fff !important; }
+  body > :not(.print-sheet) { display: none !important; }
+  .print-sheet { display: block; color: #000; font-family: var(--sans); font-size: 9.5pt; line-height: 1.35; }
+  .print-sheet h1, .print-sheet h2 { margin: 0; font-family: var(--display); text-transform: uppercase; letter-spacing: .5px; }
+  .ps-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; padding-bottom: 6px; border-bottom: 2px solid #000; }
+  .ps-head h1 { font-size: 20pt; line-height: 1.05; }
+  .ps-sub { margin-top: 2px; font-size: 10pt; }
+  .ps-totals { display: flex; gap: 12px; font-family: var(--mono); font-size: 9.5pt; white-space: nowrap; }
+  .ps-legal { font-weight: 700; }
+  .ps-illegal { font-weight: 700; text-decoration: underline; }
+  .ps-issues { margin: 6px 0 0; padding: 6px 8px; list-style: none; border: 1px solid #000; }
+  .ps-unit { margin-top: 8px; padding: 6px 8px 7px; border: 1px solid #888; break-inside: avoid; }
+  .ps-unit-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .ps-unit-head h2 { font-size: 13pt; }
+  .ps-n { font-family: var(--mono); font-size: 11pt; }
+  .ps-meta { flex: 1; color: #333; }
+  .ps-cost { font-family: var(--mono); }
+  .ps-table { width: 100%; margin-top: 4px; border-collapse: collapse; font-family: var(--mono); font-size: 8.5pt; text-align: center; }
+  .ps-table th, .ps-table td { border: 1px solid #aaa; padding: 1px 3px; }
+  .ps-table th { font-family: var(--display); font-weight: 600; letter-spacing: .5px; background: #eee; }
+  .ps-weapons .ps-left { text-align: left; font-family: var(--sans); }
+  .ps-traits { color: #333; }
+  .ps-abilities { margin-top: 4px; font-weight: 600; }
+  .ps-rules { margin: 4px 0 0; display: grid; gap: 2px; }
+  .ps-rules > div { display: flex; flex-wrap: wrap; gap: 0 6px; }
+  .ps-rules dt { font-weight: 600; }
+  .ps-rules dd { margin: 0; flex: 1 1 60%; color: #222; }
+  .ps-kit { margin: 4px 0 0; padding-left: 16px; }
+  .ps-foot { margin-top: 10px; font-size: 8pt; color: #555; }
+}
