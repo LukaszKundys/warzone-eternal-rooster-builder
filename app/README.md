@@ -63,7 +63,7 @@ The app picks Supabase automatically when both env vars are set (`src/lib/backen
     - Dr Diana's Leader and Specialist profiles share the id `cybertronic_dr_diana_base`, so only the Leader can be added.
     - The Mirrorman Leader needs Troopers of type `mirrormen`, but the Mirrorman Trooper is type `mirrormans`, so it always shows a requirement issue.
     - Cartel is marked partial and isn't offered as a faction; its Agents still appear as Advisor allies.
-- **Supabase backend:** tested by hand against a live project. Sign-up with email confirmation, log-in, loading lists, Duplicate and Delete all work. Row-level security was also checked in the database. Password reset has not been tried yet. The automated tests still use the local backend.
+- **Supabase backend:** tested by hand against a live project. Sign-up with email confirmation, log-in, loading lists, Duplicate and Delete all work. Row-level security was also checked in the database. Password reset links must be opened in the same browser that requested them; the link carries no secret of its own (Supabase PKCE), so a link opened on another device or browser shows the "invalid or expired" message. The automated tests still use the local backend.
 - **Offline:** offline use is read-only. Supabase lists are cached, so My Lists and the builder open without a signal. Saving, duplicating or deleting while offline shows an error, and there is no queued sync yet.
 - **Google sign-in:** the button is shown but disabled ("coming soon") until the provider is set up. See step 4 under Connect Supabase.
 - **Custom email (SMTP):** to be set up at release. Until then, sign-up and reset emails use Supabase's rate-limited built-in mailer.

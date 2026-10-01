@@ -238,6 +238,38 @@ describe("builder", () => {
   });
 });
 
+describe("password reset", () => {
+  it("explains a dead link and offers a new one", async () => {
+    renderApp("/reset-password");
+    expect(await screen.findByText("This reset link is invalid or has expired. Request a new one.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("New password")).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Request a new link" }));
+    expect(await screen.findByRole("heading", { name: "Reset password" })).toBeInTheDocument();
+  });
+
+  it("sets a new password from a valid link", async () => {
+    renderApp();
+    let user = await logIn();
+    await screen.findByText("4 saved lists");
+    // A valid emailed link arrives with the player signed in.
+    cleanup();
+    renderApp("/reset-password");
+    user = userEvent.setup();
+    await user.type(await screen.findByLabelText("New password"), "Newpass123!");
+    await user.click(screen.getByRole("button", { name: "Save password" }));
+    expect(await screen.findByText("4 saved lists")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Commander Vale/ }));
+    await user.click(screen.getByRole("menuitem", { name: "Log out" }));
+    await logIn(DEMO_PASSWORD);
+    expect(await screen.findByText("Email or password is incorrect.")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Password", { selector: "input" }));
+    await user.type(screen.getByLabelText("Password", { selector: "input" }), "Newpass123!");
+    await user.click(screen.getByRole("button", { name: "Log in" }));
+    expect(await screen.findByText("4 saved lists")).toBeInTheDocument();
+  });
+});
+
 describe("guards", () => {
   it("sends signed-out players from /lists to log in", async () => {
     renderApp("/lists");
