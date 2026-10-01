@@ -6,7 +6,7 @@ create table if not exists public.lists (
   user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
   name         text not null check (char_length(name) between 1 and 120),
   faction      text not null,
-  allegiance   text not null check (allegiance in ('Loyalist', 'Rebel')),
+  allegiance   text not null check (allegiance in ('agents_of_light', 'servants_of_darkness')),
   game_size    text not null,
   points       integer not null default 0 check (points >= 0),
   points_limit integer not null check (points_limit > 0),

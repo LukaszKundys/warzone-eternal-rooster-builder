@@ -24,7 +24,7 @@ It has four sample lists, built from real game data. Silent Circuit is 5 DP over
 1. Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (Project Settings → API). Never use the `service_role` / secret key here.
 2. Run the files in `supabase/migrations/` in order in the SQL Editor:
    - `0001_lists.sql` creates the `lists` table, the `updated_at` trigger, and row-level security so each player only sees their own lists.
-   - `0002_game_allegiances.sql` switches allegiance to the game's `agents_of_light` / `servants_of_darkness`.
+   - `0002_game_allegiances.sql` only matters for databases created before 0001 used the game's allegiances (`agents_of_light` / `servants_of_darkness`); on a new database it changes nothing.
 3. Authentication → URL Configuration:
    - Site URL: `http://localhost:5173` for now.
    - Redirect URLs: add `http://localhost:5173/**`.
