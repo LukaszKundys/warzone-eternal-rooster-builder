@@ -146,3 +146,10 @@ describe("guards", () => {
     expect(await screen.findByRole("heading", { name: "Log in" })).toBeInTheDocument();
   });
 });
+
+describe("google sign-in", () => {
+  it.each(["/login", "/signup"])("is shown but disabled on %s", async (path) => {
+    renderApp(path);
+    expect(await screen.findByRole("button", { name: /continue with google/i })).toBeDisabled();
+  });
+});
