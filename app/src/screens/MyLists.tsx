@@ -89,7 +89,7 @@ export function MyLists({ user }: { user: User }) {
         <div className="topbar-bar" />
         <div className="topbar-title">Warzone Eternal</div>
         <div className="spacer" />
-        <AccountMenu user={user} onSettings={() => toast("Account settings aren't available yet.")} onLogout={logout} />
+        <AccountMenu user={user} onSettings={() => navigate("/account")} onLogout={logout} />
       </header>
 
       <main className="lists">

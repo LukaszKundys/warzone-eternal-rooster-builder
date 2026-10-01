@@ -8,6 +8,8 @@ import { AuthError, type Allegiance, type Backend, type ListDraft, type SavedLis
 
 interface StoredUser extends User {
   pwHash: string;
+  /** The email the hash was made with, when it differs from the current one (after an email change). */
+  hashEmail?: string;
 }
 
 const USERS = "wze.local.users";
@@ -102,6 +104,17 @@ export function createLocalBackend(): Backend {
     const id = sessionId();
     return (id && users().find((u) => u.id === id)) || null;
   };
+  const signedIn = (): StoredUser => {
+    const u = current();
+    if (!u) throw new AuthError("unknown", "Not signed in");
+    return u;
+  };
+  const saveUser = (u: StoredUser) => write(localStorage, USERS, users().map((x) => (x.id === u.id ? u : x)));
+  const passwordMatches = async (u: StoredUser, password: string) => u.pwHash === (await hash(u.hashEmail ?? u.email, password));
+  const setPassword = async (u: StoredUser, password: string) => {
+    const { hashEmail: _old, ...rest } = u;
+    saveUser({ ...rest, pwHash: await hash(u.email, password) });
+  };
 
   return {
     kind: "local",
@@ -121,7 +134,7 @@ export function createLocalBackend(): Backend {
       await ready;
       const e = email.trim().toLowerCase();
       const u = users().find((x) => x.email === e);
-      if (!u || u.pwHash !== (await hash(e, password))) throw new AuthError("invalid_credentials");
+      if (!u || !(await passwordMatches(u, password))) throw new AuthError("invalid_credentials");
       return startSession(u, remember);
     },
 
@@ -146,14 +159,47 @@ export function createLocalBackend(): Backend {
     async updatePassword(password) {
       const u = current();
       if (!u) throw new AuthError("link_expired");
-      const pwHash = await hash(u.email, password);
-      write(localStorage, USERS, users().map((x) => (x.id === u.id ? { ...x, pwHash } : x)));
+      await setPassword(u, password);
     },
 
     async signOut() {
       localStorage.removeItem(SESSION);
       sessionStorage.removeItem(SESSION);
       emit(null);
+    },
+
+    async updateName(name) {
+      const u = signedIn();
+      const next = { ...u, name: name.trim() };
+      saveUser(next);
+      emit(toUser(next));
+      return toUser(next);
+    },
+
+    async changeEmail(email) {
+      const u = signedIn();
+      const e = email.trim().toLowerCase();
+      if (users().some((x) => x.email === e && x.id !== u.id)) throw new AuthError("email_taken");
+      // No email in local mode, so the change applies at once. Keep the email the hash was made with.
+      const next = { ...u, email: e, hashEmail: u.hashEmail ?? u.email };
+      saveUser(next);
+      emit(toUser(next));
+      return { needsConfirmation: false };
+    },
+
+    async changePassword(current, password) {
+      const u = signedIn();
+      if (!(await passwordMatches(u, current))) throw new AuthError("wrong_password");
+      if (current === password) throw new AuthError("same_password");
+      await setPassword(u, password);
+    },
+
+    async deleteAccount(password) {
+      const u = signedIn();
+      if (!(await passwordMatches(u, password))) throw new AuthError("wrong_password");
+      write(localStorage, USERS, users().filter((x) => x.id !== u.id));
+      localStorage.removeItem(listsKey(u.id));
+      await this.signOut();
     },
 
     async listLists(userId) {
