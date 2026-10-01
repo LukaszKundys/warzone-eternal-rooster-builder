@@ -1,5 +1,6 @@
--- Use the game's allegiances instead of the placeholder Loyalist / Rebel from the account-flows design.
--- Existing rows are mapped: Loyalist → agents_of_light, Rebel → servants_of_darkness.
+-- Only needed for databases set up with an earlier version of 0001_lists.sql, which allowed the
+-- placeholder allegiances 'Loyalist' and 'Rebel'. Safe to run on a fresh database: it changes nothing.
+-- Old rows are mapped: Loyalist → agents_of_light, Rebel → servants_of_darkness.
 
 alter table public.lists drop constraint if exists lists_allegiance_check;
 
